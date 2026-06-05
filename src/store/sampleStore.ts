@@ -19,6 +19,7 @@ interface SampleState {
   error: string | null;
 
   loadSongDetail: (songId: string) => Promise<void>;
+  setSongDirect: (song: Song) => void;
   loadDownstream: (sampleId: string) => Promise<void>;
   loadRecommendations: (songId: string) => Promise<void>;
   loadGraph: (songId: string) => Promise<void>;
@@ -34,6 +35,10 @@ export const useSampleStore = create<SampleState>((set, get) => ({
   waveformCache: {},
   loading: false,
   error: null,
+
+  setSongDirect: (song: Song) => {
+    set({ currentSong: song, currentSamples: [], loading: false, error: null });
+  },
 
   loadSongDetail: async (songId: string) => {
     set({ loading: true, error: null });

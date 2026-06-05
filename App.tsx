@@ -44,6 +44,8 @@ function SearchStackNav() {
     <SearchStack.Screen name="SearchResults" component={SearchResultsScreen} />
     <SearchStack.Screen name="SongDetail" component={SongDetailScreen} />
     <SearchStack.Screen name="ProducerGraph" component={ProducerGraphScreen} />
+    <SearchStack.Screen name="ArtistDetail" component={ArtistDetailScreen} />
+    <SearchStack.Screen name="SampleDeconstruction" component={SampleDeconstructionScreen} />
   </SearchStack.Navigator>;
 }
 

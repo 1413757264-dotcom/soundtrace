@@ -5,7 +5,7 @@
  * 开发降级: 后端不可用时自动 fallback → mock 数据
  */
 
-const API_BASE = 'https://1f9d235811082c1b-110-184-194-35.serveousercontent.com/api/v1';
+const API_BASE = 'http://localhost:8000/api/v1';
 
 interface ApiResponse<T> {
   success: boolean;
@@ -47,7 +47,7 @@ async function request<T>(
 
 // ─── Search ──────────────────────────────────────────
 
-export async function searchTracks(query: string, page = 1, limit = 20) {
+export async function searchTracks(query: string, page = 1, limit = 50) {
   const params = new URLSearchParams({ q: query, page: String(page), limit: String(limit) });
   return request<any[]>(`/search?${params}`);
 }
