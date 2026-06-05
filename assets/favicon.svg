@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FF6B35"/>
+      <stop offset="100%" style="stop-color:#7C5CFC"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="#0A0A0F"/>
+  <!-- DNA Helix Left -->
+  <rect x="12" y="8" width="5" height="48" rx="2.5" fill="#FF6B35"/>
+  <circle cx="14.5" cy="18" r="2.5" fill="#0A0A0F"/>
+  <circle cx="14.5" cy="30" r="2.5" fill="#0A0A0F"/>
+  <circle cx="14.5" cy="42" r="2.5" fill="#0A0A0F"/>
+  <!-- DNA Helix Right -->
+  <rect x="47" y="8" width="5" height="48" rx="2.5" fill="#7C5CFC"/>
+  <circle cx="49.5" cy="22" r="2.5" fill="#0A0A0F"/>
+  <circle cx="49.5" cy="34" r="2.5" fill="#0A0A0F"/>
+  <circle cx="49.5" cy="46" r="2.5" fill="#0A0A0F"/>
+  <!-- Cross bar -->
+  <rect x="26" y="27" width="12" height="3" rx="1.5" fill="#2DD4A0"/>
+  <!-- Soundwave -->
+  <circle cx="38" cy="10" r="4" fill="none" stroke="#FF6B35" stroke-width="1.5" opacity="0.5"/>
+  <circle cx="30" cy="50" r="5" fill="none" stroke="#7C5CFC" stroke-width="1.5" opacity="0.4"/>
+</svg>

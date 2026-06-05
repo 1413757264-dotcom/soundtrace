@@ -1,25 +1,52 @@
 {
   "expo": {
-    "name": "soundtrace",
+    "name": "音迹",
     "slug": "soundtrace",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0A0A0F",
+    "primaryColor": "#FF6B35",
+    "scheme": "soundtrace",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "app.soundtrace.music",
+      "infoPlist": {
+        "UIBackgroundModes": [
+          "audio"
+        ],
+        "NSMicrophoneUsageDescription": "音迹需要使用麦克风进行录音识曲"
+      }
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#0A0A0F",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
+      "package": "app.soundtrace.music",
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "favicon": "./assets/favicon.png"
-    }
+      "favicon": "./assets/favicon.png",
+      "name": "音迹 SoundTrace",
+      "shortName": "音迹",
+      "description": "单曲DNA溯源引擎 — 输入说唱新歌，AI拆解采样来源+制作人人脉+曲风脉络",
+      "themeColor": "#0A0A0F",
+      "backgroundColor": "#0A0A0F"
+    },
+    "plugins": [
+      ["expo-splash-screen", {
+        "backgroundColor": "#06060A",
+        "image": "./assets/splash-icon.png",
+        "dark": {
+          "backgroundColor": "#06060A",
+          "image": "./assets/splash-icon.png"
+        },
+        "imageWidth": 200
+      }]
+    ]
   }
 }
