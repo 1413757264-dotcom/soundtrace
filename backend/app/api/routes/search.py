@@ -145,6 +145,17 @@ async def autocomplete(q: str = Query(..., min_length=2)):
         return {"success": True, "data": []}
 
 
+@router.get("/enrich")
+async def enrich_song_endpoint(
+    artist: str = Query(...),
+    title: str = Query(...),
+):
+    """Get full song data: BPM + credits + samples from all sources"""
+    from app.services.enrich import enrich_song
+    data = await enrich_song(artist, title)
+    return {"success": True, "data": data}
+
+
 @router.get("/trending")
 async def trending(db: AsyncSession = Depends(get_db)):
     try:

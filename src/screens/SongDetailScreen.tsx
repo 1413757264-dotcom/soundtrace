@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   StatusBar, Dimensions, Animated,
@@ -40,7 +40,23 @@ export default function SongDetailScreen() {
   const nav = useNavigation<any>();
   const route = useRoute<any>();
   const { songId } = route.params || {};
-  const { currentSong, currentSamples, loading, loadSongDetail } = useSampleStore();
+  const { currentSong, currentSamples, loading, loadSongDetail, setSongDirect } = useSampleStore();
+  const [enriching, setEnriching] = useState(false);
+  const [enriched, setEnriched] = useState<any>(null);
+
+  // Try to enrich from backend when song loads
+  useEffect(() => {
+    if (currentSong && currentSamples.length === 0) {
+      setEnriching(true);
+      const artist = currentSong.primaryArtist.name;
+      const title = currentSong.title;
+      fetch(`http://localhost:8000/api/v1/search/enrich?artist=${encodeURIComponent(artist)}&title=${encodeURIComponent(title)}`)
+        .then(r => r.json())
+        .then(d => { if (d.success) setEnriched(d.data); })
+        .catch(() => {})
+        .finally(() => setEnriching(false));
+    }
+  }, [currentSong?.id]);
   const showMiniPlayer = usePlayerStore(s=>s.showMiniPlayer);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scrollY = useRef(new Animated.Value(0)).current;
@@ -108,8 +124,16 @@ export default function SongDetailScreen() {
           </View>
 
           {/* Genre */}
+          {/* Enriched data indicator */}
+          {enriching && <Text style={{...Typography.small,color:Colors.accent,paddingHorizontal:Spacing.lg,marginTop:Spacing.sm}}>⏳ 正在获取采样数据...</Text>}
+          {enriched && enriched.samples && enriched.samples.length > 0 && (
+            <View style={{paddingHorizontal:Spacing.lg,marginTop:Spacing.sm}}>
+              <Text style={{...Typography.captionBold,color:Colors.success}}>✓ 找到 {enriched.samples.length} 个采样源</Text>
+            </View>
+          )}
+
           <View style={S.tagRow}>
-            <Chip label={currentSong.subGenre.replace(/_/g,' ').toUpperCase()} active color={Colors.accent}/>
+            {currentSong.subGenre && <Chip label={currentSong.subGenre.replace(/_/g,' ').toUpperCase()} active color={Colors.accent}/>}
             <Chip label={GENRE_CN[currentSong.genre]||currentSong.genre}/>
             {currentSong.albumTitle && <Chip label={currentSong.albumTitle}/>}
           </View>
