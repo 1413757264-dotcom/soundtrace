@@ -5,7 +5,7 @@
  * 开发降级: 后端不可用时自动 fallback → mock 数据
  */
 
-const API_BASE = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+const API_BASE = 'https://1f9d235811082c1b-110-184-194-35.serveousercontent.com/api/v1';
 
 interface ApiResponse<T> {
   success: boolean;
