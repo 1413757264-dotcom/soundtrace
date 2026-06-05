@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated, Easing, Dimensions, ImageBackground } from 'react-native';
+import { View, Text, StyleSheet, Animated, Easing, Dimensions } from 'react-native';
 import { Colors, Typography, Shadows } from '../../constants/theme';
 
 const W = Dimensions.get('window').width;
@@ -71,12 +71,6 @@ export const SplashScreen: React.FC<Props> = ({ onFinish }) => {
 
   return (
     <Animated.View style={[S.container, { opacity: bgOpacity }]}>
-      {/* Background image */}
-      <ImageBackground
-        source={require('../../../assets/splash-bg.png')}
-        style={S.bgImage}
-        resizeMode="cover"
-      />
       {/* Dark overlay for text readability */}
       <View style={S.overlay} />
       {/* Ambient glow */}
