@@ -63,12 +63,12 @@ async def search_artist(query: str, limit: int = 10) -> list[dict]:
 
 
 async def lookup_artist(artist_id: int) -> Optional[dict]:
-    """Get artist details + top songs"""
+    """Get artist details + ALL songs (iTunes max is 200)"""
     try:
-        async with httpx.AsyncClient(timeout=10) as client:
+        async with httpx.AsyncClient(timeout=15) as client:
             resp = await client.get(
                 f"{ITUNES_API}/lookup",
-                params={"id": artist_id, "entity": "song", "limit": 20},
+                params={"id": artist_id, "entity": "song", "limit": 200},
             )
             if resp.status_code == 200:
                 return resp.json()
