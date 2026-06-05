@@ -20,7 +20,7 @@ async def search(
     type: str = Query("track"),
     artist: str = Query("", description="Filter by artist name"),
     page: int = Query(1, ge=1),
-    limit: int = Query(50, le=200),
+    limit: int = Query(200, le=200),
     source: str = Query("all"),
     genre: Optional[str] = Query(None),
     year_min: Optional[int] = Query(None),

@@ -47,8 +47,9 @@ async function request<T>(
 
 // ─── Search ──────────────────────────────────────────
 
-export async function searchTracks(query: string, page = 1, limit = 50) {
+export async function searchTracks(query: string, page = 1, limit = 200, artist?: string) {
   const params = new URLSearchParams({ q: query, page: String(page), limit: String(limit) });
+  if (artist) params.set('artist', artist);
   return request<any[]>(`/search?${params}`);
 }
 
