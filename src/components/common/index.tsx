@@ -5,8 +5,6 @@ import {
 } from 'react-native';
 import { Colors, Spacing, Typography, Radius, Shadows } from '../../constants/theme';
 import { GradientCover } from './GradientCover';
-import { BouncyPressable } from './interactions';
-import { Haptic } from '../../utils/haptics';
 
 // ═══════════════════════════════════════════════════════
 // SongRow — Premium list item with glass surface
@@ -29,7 +27,7 @@ export const SongRow: React.FC<SongRowProps> = ({
   const fmt = (st: string) => st.replace(/_/g, ' ').toUpperCase();
 
   return (
-    <BouncyPressable onPress={onPress} style={s.row} haptic="light">
+    <TouchableOpacity onPress={onPress} style={s.row} activeOpacity={0.7}>
       <View style={s.rowInner}>
         <GradientCover artistName={artist} title={title} size={52} radius={Radius.md} />
         <View style={s.info}>
@@ -57,7 +55,7 @@ export const SongRow: React.FC<SongRowProps> = ({
           )}
         </View>
       </View>
-    </BouncyPressable>
+    </TouchableOpacity>
   );
 };
 

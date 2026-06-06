@@ -71,6 +71,14 @@ class SubGenre(str, enum.Enum):
     LO_FI = "lo_fi"
     UNDERGROUND = "underground"
     EXPERIMENTAL = "experimental"
+    SOUL = "soul"
+    FUNK = "funk"
+    RNB = "rnb"
+    POP = "pop"
+    ROCK = "rock"
+    JAZZ = "jazz"
+    ELECTRONIC = "electronic"
+    INDIE = "indie"
 
 
 class CreditRole(str, enum.Enum):
