@@ -7,6 +7,7 @@ from app.core.database import get_db
 from app.db.repository import (
     sample_get_by_song, sample_get_downstream, sample_get_by_id,
     sample_get_most_sampled, song_get_by_id, artist_get_by_id,
+    artist_get_discography, credit_get_by_song,
 )
 from app.services.whosampled import find_sample_matches
 from app.services.recommendations import generate_discover_playlist
@@ -97,6 +98,47 @@ async def discover_samples(
         return {"success": True, "data": playlist}
     except Exception:
         return {"success": True, "data": []}
+
+
+@router.get("/artist-songs")
+async def artist_songs(
+    artist_id: str = Query("a01", description="Artist ID"),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get all songs for an artist with sample counts and credits"""
+    songs = await artist_get_discography(db, artist_id)
+    artist = await artist_get_by_id(db, artist_id)
+
+    data = []
+    for song in songs:
+        samples = await sample_get_by_song(db, song.id)
+        credits = await credit_get_by_song(db, song.id)
+        data.append({
+            "id": song.id,
+            "title": song.title,
+            "album": song.album_title or "",
+            "release_year": song.release_year or 0,
+            "duration_ms": song.duration_ms,
+            "bpm": song.bpm or 0,
+            "key": song.key_signature or "",
+            "sub_genre": song.sub_genre or "",
+            "sample_count": len(samples),
+            "credit_count": len(credits),
+            "primary_artist": {"id": artist_id, "name": artist.name if artist else "Unknown"},
+        })
+
+    data.sort(key=lambda s: (s["album"], s["release_year"]))
+
+    return {
+        "success": True,
+        "data": data,
+        "meta": {
+            "artist_id": artist_id,
+            "artist_name": artist.name if artist else "",
+            "total": len(data),
+            "albums": sorted(set(s["album"] for s in data if s["album"])),
+        },
+    }
 
 
 @router.get("/{sample_id}")

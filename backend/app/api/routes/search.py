@@ -1,165 +1,187 @@
-"""Search API — iTunes search + artist lookup for full discography"""
-
+"""Search API — Kanye West exclusive: search local database only"""
 from fastapi import APIRouter, Query, Depends
-from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, func, and_, or_
 from app.core.database import get_db
-from app.services.spotify import search_tracks as spotify_search, get_audio_features, spotify_track_to_song_dict
-from app.services.itunes import search_tracks as itunes_search, itunes_track_to_dict, lookup_artist as itunes_lookup_artist
-from app.services.recommendations import generate_discover_playlist
-from app.db.repository import song_search as db_search
-from app.core.cache import cache_get, cache_set
-import json
+from app.models.models import Song, Artist, Sample, Credit
+from app.db.repository import song_get_by_id, artist_get_by_id, sample_get_by_song, credit_get_by_song
 
 router = APIRouter(prefix="/api/v1/search", tags=["search"])
+
+KANYE_ID = "a01"
 
 
 @router.get("")
 async def search(
     q: str = Query("", min_length=0),
-    type: str = Query("track"),
-    artist: str = Query("", description="Filter by artist name"),
     page: int = Query(1, ge=1),
     limit: int = Query(200, le=200),
-    source: str = Query("all"),
     db: AsyncSession = Depends(get_db),
 ):
-    """Hybrid search: iTunes API + local PostgreSQL"""
-    results = []
-    total = 0
+    """Search Kanye West songs only — local database"""
+    stmt = select(Song).where(Song.primary_artist_id == KANYE_ID)
 
-    # Cache
-    cache_key = f"search:{q}:{artist}:{page}:{limit}"
-    cached = await cache_get(cache_key)
-    if cached:
-        return json.loads(cached)
+    if q.strip():
+        stmt = stmt.where(
+            or_(
+                Song.title.ilike(f"%{q}%"),
+                Song.album_title.ilike(f"%{q}%"),
+            )
+        )
 
-    # ── iTunes ──
-    if source in ("itunes", "all"):
-        try:
-            offset = (page - 1) * limit
-            itunes_results = await itunes_search(q, limit=limit, offset=offset, artist=artist)
-            for track in itunes_results.get("results", []):
-                results.append(itunes_track_to_dict(track))
-            total = itunes_results.get("resultCount", len(results))
-        except Exception:
-            pass
+    # Count total
+    count_stmt = select(func.count()).select_from(stmt.subquery())
+    total = (await db.execute(count_stmt)).scalar() or 0
 
-    # ── Local DB ──
-    if source in ("local", "all") and len(results) < limit:
-        local_songs = await db_search(db, query=q, limit=limit - len(results), offset=(page-1)*limit)
-        for s in local_songs:
-            results.append({
-                "title": s.title, "spotify_id": s.spotify_id,
-                "primary_artist_name": s.primary_artist_obj.name if hasattr(s, 'primary_artist_obj') and s.primary_artist_obj else "",
-                "release_year": s.release_year, "duration_ms": s.duration_ms,
-                "bpm": s.bpm, "key_signature": s.key_signature,
-                "sub_genre": s.sub_genre.value if s.sub_genre else None,
-            })
+    # Paginate
+    offset = (page - 1) * limit
+    result = await db.execute(
+        stmt.order_by(Song.release_year.desc(), Song.album_title).offset(offset).limit(limit)
+    )
+    songs = result.scalars().all()
 
-    response = {
-        "success": True, "data": results,
-        "meta": {"page": page, "limit": limit, "total": total or len(results), "source": source, "query": q},
-    }
-    await cache_set(cache_key, json.dumps(response), ttl=300)
-    return response
+    data = []
+    for s in songs:
+        samples = await sample_get_by_song(db, s.id)
+        credits = await credit_get_by_song(db, s.id)
+        data.append({
+            "id": s.id,
+            "title": s.title,
+            "primary_artist_name": "Kanye West",
+            "primary_artist_id": KANYE_ID,
+            "album_title": s.album_title or "",
+            "release_year": s.release_year or 0,
+            "duration_ms": s.duration_ms,
+            "bpm": s.bpm or 0,
+            "key_signature": s.key_signature or "",
+            "sub_genre": s.sub_genre or "",
+            "sample_count": len(samples),
+            "credit_count": len(credits),
+        })
 
-
-@router.get("/artist-lookup/{artist_id}")
-async def artist_lookup(
-    artist_id: int,
-    db: AsyncSession = Depends(get_db),
-):
-    """
-    Get an artist's FULL discography via iTunes Lookup API.
-    Returns ALL albums + tracks, grouped by album, sorted by year.
-    This gives the complete catalog, not just search results.
-    """
-    from app.services.itunes import lookup_artist as itunes_lookup
-
-    cache_key = f"artist_lookup:{artist_id}"
-    cached = await cache_get(cache_key)
-    if cached:
-        return json.loads(cached)
-
-    data = await itunes_lookup(artist_id)
-    if not data:
-        return {"success": False, "error": {"code": "NOT_FOUND", "message": "Artist not found"}}
-
-    results = data.get("results", [])
-    artist_info = results[0] if results else {}
-    songs = []
-    albums: dict[str, dict] = {}
-
-    for r in results[1:]:
-        if r.get("wrapperType") == "track":
-            track = itunes_track_to_dict(r)
-            songs.append(track)
-
-            # Group by album
-            album_name = r.get("collectionName", "未知专辑")
-            if album_name not in albums:
-                albums[album_name] = {
-                    "name": album_name,
-                    "year": int(r["releaseDate"][:4]) if r.get("releaseDate") else None,
-                    "artwork": r.get("artworkUrl100", "").replace("100x100", "600x600"),
-                    "track_count": r.get("trackCount", 0),
-                    "songs": [],
-                }
-            albums[album_name]["songs"].append(track)
-
-    # Sort albums by year desc
-    album_list = sorted(albums.values(), key=lambda a: a["year"] or 0, reverse=True)
-
-    response = {
+    return {
         "success": True,
-        "data": {
-            "artist": {
-                "name": artist_info.get("artistName", ""),
-                "genre": artist_info.get("primaryGenreName", ""),
-                "itunes_id": str(artist_info.get("artistId", "")),
-            },
-            "total_songs": len(songs),
-            "total_albums": len(album_list),
-            "albums": album_list,
-            "songs": songs,
+        "data": data,
+        "meta": {
+            "page": page, "limit": limit, "total": total,
+            "source": "kanye_db", "query": q,
         },
     }
-    await cache_set(cache_key, json.dumps(response), ttl=86400)  # 24h cache
-    return response
-
-
-@router.get("/autocomplete")
-async def autocomplete(q: str = Query(..., min_length=2)):
-    try:
-        spotify_results = await spotify_search(q, limit=5)
-        suggestions = []
-        for track in spotify_results.get("tracks", {}).get("items", []):
-            suggestions.append({
-                "title": track["name"], "artist": track["artists"][0]["name"] if track.get("artists") else "Unknown",
-                "spotify_id": track["id"],
-                "year": track["album"]["release_date"][:4] if track.get("album", {}).get("release_date") else None,
-            })
-        return {"success": True, "data": suggestions}
-    except Exception:
-        return {"success": True, "data": []}
-
-
-@router.get("/enrich")
-async def enrich_song_endpoint(
-    artist: str = Query(...),
-    title: str = Query(...),
-):
-    """Get full song data: BPM + credits + samples from all sources"""
-    from app.services.enrich import enrich_song
-    data = await enrich_song(artist, title)
-    return {"success": True, "data": data}
 
 
 @router.get("/trending")
 async def trending(db: AsyncSession = Depends(get_db)):
-    try:
-        playlist = await generate_discover_playlist(db, limit=10)
-        return {"success": True, "data": playlist}
-    except Exception:
-        return {"success": True, "data": ["Kendrick Lamar 新专辑采样", "BoomBap 经典采样排行"]}
+    """Most sampled Kanye songs"""
+    result = await db.execute(
+        select(Song.title, func.count(Sample.id).label("cnt"))
+        .join(Sample, Sample.target_song_id == Song.id)
+        .where(Song.primary_artist_id == KANYE_ID)
+        .group_by(Song.id)
+        .order_by(func.count(Sample.id).desc())
+        .limit(10)
+    )
+    return {
+        "success": True,
+        "data": [
+            {"title": r[0], "sample_count": r[1]}
+            for r in result.all()
+        ],
+    }
+
+
+@router.get("/autocomplete")
+async def autocomplete(
+    q: str = Query(..., min_length=1),
+    db: AsyncSession = Depends(get_db),
+):
+    """Autocomplete Kanye song titles"""
+    result = await db.execute(
+        select(Song.title, Song.album_title, Song.release_year)
+        .where(
+            and_(
+                Song.primary_artist_id == KANYE_ID,
+                Song.title.ilike(f"%{q}%"),
+            )
+        )
+        .order_by(Song.release_year.desc())
+        .limit(8)
+    )
+    return {
+        "success": True,
+        "data": [
+            {"title": r[0], "album": r[1], "year": r[2]}
+            for r in result.all()
+        ],
+    }
+
+
+@router.get("/enrich")
+async def enrich_song_endpoint(
+    song_id: str = Query(...),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get full song detail: description + samples + credits + album intro"""
+    from app.data.kanye_content import SONG_DESCRIPTIONS, ALBUM_INTROS
+
+    song = await song_get_by_id(db, song_id)
+    if not song:
+        return {"success": False, "error": {"code": "NOT_FOUND", "message": "Song not found"}}
+
+    samples = await sample_get_by_song(db, song_id)
+    credits = await credit_get_by_song(db, song_id)
+
+    sample_data = []
+    for sp in samples:
+        src_song = await song_get_by_id(db, sp.source_song_id) if sp.source_song_id else None
+        src_artist = await artist_get_by_id(db, sp.source_artist_id) if sp.source_artist_id else None
+        sample_data.append({
+            "id": sp.id,
+            "type": sp.type.value if sp.type else "melody",
+            "source_title": src_song.title if src_song else "",
+            "source_artist": src_artist.name if src_artist else "",
+            "source_year": src_song.release_year if src_song else None,
+            "start_time_ms": sp.start_time_ms,
+            "end_time_ms": sp.end_time_ms,
+            "confidence": sp.confidence,
+            "description": sp.description,
+        })
+
+    credit_data = []
+    for cr in credits:
+        art = await artist_get_by_id(db, cr.artist_id) if cr.artist_id else None
+        credit_data.append({
+            "artist_name": art.name if art else "",
+            "artist_id": cr.artist_id,
+            "role": cr.role.value if cr.role else "",
+        })
+
+    # Rich content
+    song_info = SONG_DESCRIPTIONS.get(song_id, {})
+    album_info = ALBUM_INTROS.get(song.album_title or "", {})
+
+    return {
+        "success": True,
+        "data": {
+            "id": song.id,
+            "title": song.title,
+            "primary_artist": "Kanye West",
+            "album": song.album_title,
+            "year": song.release_year,
+            "duration_ms": song.duration_ms,
+            "bpm": song.bpm,
+            "key": song.key_signature,
+            "sub_genre": song.sub_genre,
+            "samples": sample_data,
+            "credits": credit_data,
+            # Rich descriptions
+            "theme": song_info.get("theme", ""),
+            "context": song_info.get("context", ""),
+            "album_intro": {
+                "era": album_info.get("era", ""),
+                "bio": album_info.get("bio", ""),
+                "theme": album_info.get("theme", ""),
+                "sound": album_info.get("sound", ""),
+                "legacy": album_info.get("legacy", ""),
+            } if album_info else None,
+        },
+    }

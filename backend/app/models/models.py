@@ -71,6 +71,7 @@ class SubGenre(str, enum.Enum):
     LO_FI = "lo_fi"
     UNDERGROUND = "underground"
     EXPERIMENTAL = "experimental"
+    GOSPEL = "gospel"
     SOUL = "soul"
     FUNK = "funk"
     RNB = "rnb"
@@ -136,7 +137,7 @@ class Song(Base):
     bpm = Column(Integer, nullable=True)
     key_signature = Column(String(16), nullable=True)     # "C# minor"
     genre = Column(SAEnum(Genre), default=Genre.UNKNOWN)
-    sub_genre = Column(SAEnum(SubGenre), nullable=True)
+    sub_genre = Column(String(32), nullable=True)  # free-text: trap/conscious/gospel/funk/...
     cover_art_url = Column(String(512), nullable=True)
     spotify_id = Column(String(64), nullable=True, index=True, unique=True)
     apple_music_id = Column(String(64), nullable=True)

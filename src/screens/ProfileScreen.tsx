@@ -1,181 +1,174 @@
-import React from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  StatusBar,
-} from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Colors, Spacing, Typography, Radius, Shadows, Glass } from '../constants/theme';
-import { SectionHeader, SongRow } from '../components/common';
-import { showToast } from '../components/common/toast';
-import { mockSongs } from '../services/api/mockData';
-import type { Song } from '../types/entities';
+
+const API = 'http://localhost:8000/api/v1';
+const ERA_COLORS = [
+  '#A67C52', '#8B7355', '#C4457A', '#808080', '#CC3333',
+  '#D4D4D4', '#F2652E', '#4A9058', '#3B6FB6', '#1A1A1A',
+  '#E84820', '#8B1A1A', '#A0522D', '#B0B0B0',
+];
 
 export default function ProfileScreen() {
-  const navigation = useNavigation<any>();
+  const nav = useNavigation<any>();
+  const [stats, setStats] = useState<any>(null);
+  const [topSampled, setTopSampled] = useState<any[]>([]);
+  const [albums, setAlbums] = useState<any[]>([]);
 
-  const handleSongPress = (song: Song) => {
-    navigation.navigate('SongDetail', { songId: song.id });
-  };
+  useEffect(() => {
+    fetch(`${API}/samples/artist-songs?artist_id=a01`)
+      .then(r => r.json())
+      .then(res => {
+        if (!res.success) return;
+        const songs = res.data;
+        const albumSet = new Set(songs.map((s: any) => s.album));
+        const totalSamples = songs.reduce((t: number, s: any) => t + s.sample_count, 0);
+        const totalCredits = songs.reduce((t: number, s: any) => t + s.credit_count, 0);
+        const sampledTracks = songs.filter((s: any) => s.sample_count > 0).length;
+        const totalMs = songs.reduce((t: number, s: any) => t + s.duration_ms, 0);
+
+        setStats({
+          tracks: songs.length, albums: albumSet.size,
+          samples: totalSamples, credits: totalCredits,
+          sampledTracks, totalMin: Math.floor(totalMs / 60000),
+          avgBpm: Math.round(songs.reduce((t: number, s: any) => t + (s.bpm || 0), 0) / songs.length),
+        });
+
+        const grouped: any = {};
+        songs.forEach((s: any) => {
+          if (!s.album) return;
+          if (!grouped[s.album]) grouped[s.album] = { name: s.album, year: s.release_year, tracks: 0, samples: 0, credits: 0 };
+          grouped[s.album].tracks += 1;
+          grouped[s.album].samples += s.sample_count;
+          grouped[s.album].credits += s.credit_count;
+        });
+        setAlbums(Object.values(grouped).sort((a: any, b: any) => a.year - b.year));
+
+        setTopSampled(
+          songs.filter((s: any) => s.sample_count > 0)
+            .sort((a: any, b: any) => b.sample_count - a.sample_count)
+            .slice(0, 10)
+        );
+      });
+  }, []);
+
+  if (!stats) {
+    return (
+      <SafeAreaView style={S.bg} edges={['top']}>
+        <ActivityIndicator size="large" color="#CC3333" style={{ marginTop: 200 }} />
+      </SafeAreaView>
+    );
+  }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar barStyle="light-content" backgroundColor={Colors.bg} />
-
+    <SafeAreaView style={S.bg} edges={['top']}>
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Profile Header */}
-        <View style={styles.profileHeader}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>👤</Text>
-          </View>
-          <Text style={styles.username}>音乐探索者</Text>
-          <Text style={styles.bio}>发现采样背后的故事</Text>
+        {/* Header */}
+        <View style={S.header}>
+          <Text style={S.headerLabel}>DATA</Text>
+          <Text style={S.headerTitle}>THE<Text style={{ color: '#CC3333' }}> NUMBERS</Text></Text>
+        </View>
 
-          {/* Stats */}
-          <View style={styles.statsRow}>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>12</Text>
-              <Text style={styles.statLabel}>溯源歌曲</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>5</Text>
-              <Text style={styles.statLabel}>收藏采样</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>3</Text>
-              <Text style={styles.statLabel}>关注制作人</Text>
-            </View>
+        {/* Big numbers */}
+        <View style={S.bigRow}>
+          <View style={S.bigCell}>
+            <Text style={S.bigNum}>{stats.tracks}</Text>
+            <Text style={S.bigLab}>TRACKS</Text>
+          </View>
+          <View style={S.bigCell}>
+            <Text style={[S.bigNum, { color: '#CC3333' }]}>{stats.samples}</Text>
+            <Text style={S.bigLab}>SAMPLES</Text>
+          </View>
+          <View style={S.bigCell}>
+            <Text style={[S.bigNum, { color: '#D4A843' }]}>{stats.credits}</Text>
+            <Text style={S.bigLab}>CREDITS</Text>
           </View>
         </View>
 
-        {/* Saved Samples */}
-        <SectionHeader title="📌 收藏的采样" actionLabel="查看全部" onAction={() => {}} />
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.savedScroll}
-        >
+        {/* Secondary stats */}
+        <View style={S.secRow}>
           {[
-            { name: 'Try a Little Tenderness', artist: 'Aretha Franklin', year: 1963, type: 'vocal_chop' },
-            { name: 'Funky Drummer', artist: 'James Brown', year: 1970, type: 'drum' },
-            { name: 'Impeach the President', artist: 'James Brown', year: 1973, type: 'drum' },
-          ].map((item, i) => (
-            <TouchableOpacity key={i} style={styles.savedCard} activeOpacity={0.7}>
-              <View style={styles.savedCover}>
-                <Text style={styles.savedCoverIcon}>🎵</Text>
-              </View>
-              <Text style={styles.savedName} numberOfLines={1}>{item.name}</Text>
-              <Text style={styles.savedArtist} numberOfLines={1}>{item.artist}</Text>
-              <Text style={styles.savedYear}>{item.year}</Text>
-            </TouchableOpacity>
+            { v: stats.albums, l: 'ALBUMS' },
+            { v: stats.sampledTracks, l: 'WITH SAMPLES' },
+            { v: `${stats.totalMin}`, l: 'MINUTES' },
+            { v: stats.avgBpm, l: 'AVG BPM' },
+          ].map((s, i) => (
+            <View key={i} style={S.secCell}>
+              <Text style={S.secVal}>{s.v}</Text>
+              <Text style={S.secLab}>{s.l}</Text>
+            </View>
           ))}
-        </ScrollView>
+        </View>
 
-        {/* Recent History */}
-        <SectionHeader title="🕐 最近浏览" actionLabel="清除" onAction={() => showToast('浏览历史已清除', 'success')} />
-        {mockSongs.slice(0, 3).map(song => (
-          <SongRow
-            key={song.id}
-            title={song.title}
-            artist={song.primaryArtist.name}
-            bpm={song.bpm}
-            keySignature={song.key}
-            subGenre={song.subGenre}
-            sampleCount={song.sampleCount}
-            onPress={() => handleSongPress(song)}
-          />
+        {/* Album bars */}
+        <View style={S.section}>
+          <Text style={S.secHead}>ALBUM BREAKDOWN</Text>
+        </View>
+        {albums.map((a: any, i: number) => {
+          const maxSamples = Math.max(...albums.map((x: any) => x.samples), 1);
+          const barW = Math.max((a.samples / maxSamples) * 120, 2);
+          return (
+            <View key={a.name} style={S.barRow}>
+              <View style={[S.bar, { width: barW, backgroundColor: ERA_COLORS[i % ERA_COLORS.length] }]} />
+              <Text style={S.barName} numberOfLines={1}>{a.name}</Text>
+              <Text style={S.barStats}>{a.tracks}T {a.samples}S</Text>
+            </View>
+          );
+        })}
+
+        {/* Most sampled */}
+        <View style={S.section}>
+          <Text style={S.secHead}>MOST SAMPLED</Text>
+        </View>
+        {topSampled.map((s, i) => (
+          <TouchableOpacity key={s.id} style={S.rankRow} activeOpacity={0.6}
+            onPress={() => nav.navigate('SongDetail', {
+              songId: s.id, songTitle: s.title, artistName: 'Kanye West',
+              songYear: s.release_year, songBpm: s.bpm, songKey: s.key,
+              songGenre: s.sub_genre, songAlbum: s.album,
+            })}>
+            <Text style={S.rankNum}>{String(i + 1).padStart(2, '0')}</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={S.rankTitle}>{s.title}</Text>
+              <Text style={S.rankMeta}>{s.album} * {s.release_year}</Text>
+            </View>
+            <Text style={S.rankSamples}>{s.sample_count} SMPL</Text>
+          </TouchableOpacity>
         ))}
-
-        {/* Settings Link */}
-        <TouchableOpacity
-          style={styles.settingsLink}
-          onPress={() => navigation.navigate('Settings')}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.settingsIcon}>⚙️</Text>
-          <Text style={styles.settingsText}>设置</Text>
-          <Text style={styles.settingsArrow}>→</Text>
-        </TouchableOpacity>
-
-        <View style={{ height: 120 }} />
+        <View style={{ height: 60 }} />
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.bg },
-  profileHeader: {
-    alignItems: 'center',
-    padding: Spacing.xl,
-    backgroundColor: Colors.bgSecondary,
-    marginBottom: Spacing.md,
-  },
-  avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: Colors.bgCardSolid,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: Colors.accent,
-    marginBottom: Spacing.md,
-    ...Shadows.glow
-  },
-  avatarText: { fontSize: 36 },
-  username: { ...Typography.h2, color: Colors.textPrimary },
-  bio: { ...Typography.caption, color: Colors.textTertiary, marginTop: 4 },
-  statsRow: {
-    flexDirection: 'row',
-    marginTop: Spacing.lg,
-    backgroundColor: Colors.bgCardSolid, borderWidth: 1, borderColor: Colors.border,
-    borderRadius: Radius.md,
-    padding: Spacing.md,
-    width: '100%',
-  },
-  statItem: { flex: 1, alignItems: 'center' },
-  statValue: { ...Typography.h2, color: Colors.accent },
-  statLabel: { ...Typography.label, color: Colors.textTertiary, textTransform: 'none', marginTop: 2 },
-  statDivider: { width: 1, height: 30, backgroundColor: Colors.divider },
-  savedScroll: {
-    paddingHorizontal: Spacing.md,
-    gap: Spacing.md,
-  },
-  savedCard: {
-    width: 120,
-    backgroundColor: Colors.bgCardSolid, borderWidth: 1, borderColor: Colors.border,
-    borderRadius: Radius.md,
-    padding: Spacing.sm,
-    alignItems: 'center',
-    gap: 4,
-  },
-  savedCover: {
-    width: 80, height: 80, borderRadius: Radius.sm,
-    backgroundColor: Colors.bgSecondary, justifyContent: 'center', alignItems: 'center',
-    marginBottom: 4,
-  },
-  savedCoverIcon: { fontSize: 32 },
-  savedName: { ...Typography.captionBold, color: Colors.textPrimary, textAlign: 'center' },
-  savedArtist: { ...Typography.caption, color: Colors.textSecondary, textAlign: 'center' },
-  savedYear: { ...Typography.label, color: Colors.accent, textTransform: 'none' },
-  settingsLink: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginHorizontal: Spacing.md,
-    marginTop: Spacing.lg,
-    padding: Spacing.md,
-    backgroundColor: Colors.bgCardSolid, borderWidth: 1, borderColor: Colors.border,
-    borderRadius: Radius.md,
-    gap: Spacing.md,
-  },
-  settingsIcon: { fontSize: 18 },
-  settingsText: { flex: 1, ...Typography.bodyBold, color: Colors.textPrimary },
-  settingsArrow: { ...Typography.h3, color: Colors.textTertiary },
+const S = StyleSheet.create({
+  bg: { flex: 1, backgroundColor: '#050505' },
+  header: { paddingHorizontal: 24, paddingTop: 20, paddingBottom: 24 },
+  headerLabel: { color: '#CC3333', fontSize: 10, letterSpacing: 3, fontWeight: '800' },
+  headerTitle: { color: '#EBEBEB', fontSize: 26, fontWeight: '900', letterSpacing: 2, marginTop: 4 },
+
+  bigRow: { flexDirection: 'row', paddingHorizontal: 24, gap: 2, marginBottom: 20 },
+  bigCell: { flex: 1, backgroundColor: '#0A0A0A', padding: 20, alignItems: 'center', borderWidth: 1, borderColor: '#111' },
+  bigNum: { color: '#EBEBEB', fontSize: 36, fontWeight: '900' },
+  bigLab: { color: '#555', fontSize: 9, letterSpacing: 2, fontWeight: '700', marginTop: 4 },
+
+  secRow: { flexDirection: 'row', paddingHorizontal: 24, gap: 6, marginBottom: 36 },
+  secCell: { flex: 1, backgroundColor: '#0A0A0A', padding: 12, alignItems: 'center' },
+  secVal: { color: '#CCC', fontSize: 16, fontWeight: '800' },
+  secLab: { color: '#555', fontSize: 8, letterSpacing: 1, fontWeight: '700', marginTop: 2 },
+
+  section: { paddingHorizontal: 24, marginTop: 20, marginBottom: 12 },
+  secHead: { color: '#CC3333', fontSize: 11, letterSpacing: 3, fontWeight: '800' },
+
+  barRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, paddingHorizontal: 24, gap: 14 },
+  bar: { height: 2, maxWidth: 120 },
+  barName: { color: '#999', fontSize: 12, fontWeight: '600', flex: 1 },
+  barStats: { color: '#444', fontSize: 10, fontWeight: '700' },
+
+  rankRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 24, borderBottomWidth: 1, borderBottomColor: '#0D0D0D' },
+  rankNum: { color: '#CC3333', fontSize: 14, fontWeight: '900', width: 28 },
+  rankTitle: { color: '#CCC', fontSize: 14, fontWeight: '600' },
+  rankMeta: { color: '#444', fontSize: 11, marginTop: 1 },
+  rankSamples: { color: '#CC3333', fontSize: 10, fontWeight: '800', letterSpacing: 1 },
 });

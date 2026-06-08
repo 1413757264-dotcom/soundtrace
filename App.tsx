@@ -3,7 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text } from 'react-native';
 import HomeScreen from './src/screens/HomeScreen';
 import SearchScreen from './src/screens/SearchScreen';
 import SongDetailScreen from './src/screens/SongDetailScreen';
@@ -11,11 +11,25 @@ import ProfileScreen from './src/screens/ProfileScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
-const theme = { ...DefaultTheme, dark: true, colors: { ...DefaultTheme.colors, background: '#000' } };
+const theme = { ...DefaultTheme, dark: true, colors: { ...DefaultTheme.colors, background: '#050505' } };
 
-function TabIcon({ label, focused }: { label: string; focused: boolean }) {
-  const icons: Record<string, string> = { '首页': '🏠', '搜索': '🔍', '发现': '🧬', '我的': '👤' };
-  return <Text style={{ fontSize: 20, opacity: focused ? 1 : 0.4 }}>{icons[label] || '●'}</Text>;
+function TabBarIcon({ label, focused }: { label: string; focused: boolean }) {
+  return (
+    <View style={{ alignItems: 'center', paddingTop: 6 }}>
+      <Text style={{
+        color: focused ? '#CC3333' : '#333',
+        fontSize: 11, fontWeight: '800', letterSpacing: 2,
+      }}>
+        {label}
+      </Text>
+      {focused && (
+        <View style={{
+          width: 4, height: 4, borderRadius: 2,
+          backgroundColor: '#CC3333', marginTop: 4,
+        }} />
+      )}
+    </View>
+  );
 }
 
 export default function App() {
@@ -27,15 +41,18 @@ export default function App() {
           {() => (
             <Tab.Navigator screenOptions={({ route }) => ({
               headerShown: false,
-              tabBarStyle: { backgroundColor: '#111', borderTopColor: '#222', height: 56 },
-              tabBarActiveTintColor: '#FF6B35',
-              tabBarInactiveTintColor: '#666',
-              tabBarIcon: ({ focused }) => <TabIcon label={route.name} focused={focused} />,
+              tabBarStyle: {
+                backgroundColor: '#080808', borderTopColor: '#111', height: 52,
+                borderTopWidth: 0,
+              },
+              tabBarActiveTintColor: '#CC3333',
+              tabBarInactiveTintColor: '#333',
+              tabBarIcon: ({ focused }) => <TabBarIcon label={route.name} focused={focused} />,
+              tabBarLabel: () => null,
             })}>
-              <Tab.Screen name="首页" component={HomeScreen} />
-              <Tab.Screen name="搜索" component={SearchScreen} />
-              <Tab.Screen name="发现" component={ProfileScreen} />
-              <Tab.Screen name="我的" component={ProfileScreen} />
+              <Tab.Screen name="ARCHIVE" component={HomeScreen} />
+              <Tab.Screen name="TRACE" component={SearchScreen} />
+              <Tab.Screen name="DATA" component={ProfileScreen} />
             </Tab.Navigator>
           )}
         </Stack.Screen>

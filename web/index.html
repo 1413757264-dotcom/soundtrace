@@ -1,25 +1,467 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="utf-8" />
-  <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover" />
-  <title>音迹 SoundTrace — 单曲DNA溯源引擎</title>
-  <meta name="description" content="输入任意说唱新歌，AI拆解采样来源+制作人人脉+曲风脉络。区别于纯曲风推荐，主打采样同源、制作人同源、采样老歌溯源三大发现逻辑" />
-  <meta name="theme-color" content="#0A0A0F" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="音迹" />
-  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-  <link rel="apple-touch-icon" href="/favicon.svg" />
-  <style id="expo-reset">
-    html,body{height:100%;background:#0A0A0F}
-    body{overflow:hidden;margin:0}
-    #root{display:flex;height:100%;flex:1}
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>KANYE WEST · 采样档案</title>
+<style>
+:root{--bg:#0D0D0C;--surf:#181815;--surf2:#22221E;--border:#2A2A26;--text:#D4D4D0;--dim:#8A8A84;--sub:#5A5A56;--accent:#B8B8B2}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue','Arial Narrow',sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+body{min-height:100dvh}
+body::after{content:'';position:fixed;inset:0;z-index:9999;pointer-events:none;opacity:.03;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");background-size:180px 180px}
+#bg-canvas{position:fixed;inset:0;z-index:0;pointer-events:none}
+.app{position:relative;z-index:1;min-height:100dvh;padding-bottom:72px}
+.header{padding:100px 6vw 80px;max-width:680px}
+.header-index{font-family:'Courier New',monospace;font-size:11px;color:var(--sub);letter-spacing:4px;margin-bottom:24px;opacity:0;animation:reveal 1s .1s forwards}
+.header-title{font-size:clamp(56px,10vw,120px);font-weight:900;line-height:.9;letter-spacing:-3px;color:var(--text);opacity:0;animation:reveal 1s .2s forwards}
+.header-title span{display:inline-block;-webkit-text-stroke:1px var(--text);color:transparent}
+.header-rule{width:60px;height:1px;background:var(--sub);margin:40px 0 24px;opacity:0;animation:reveal 1s .35s forwards}
+.header-stats{display:flex;gap:60px;opacity:0;animation:reveal 1s .45s forwards}
+.stat-num{font-size:36px;font-weight:900;line-height:1;color:var(--text)}
+.stat-lab{font-size:9px;letter-spacing:3px;color:var(--sub);font-weight:700;margin-top:4px}
+@keyframes reveal{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+.timeline{position:relative;max-width:560px;margin-left:6vw;padding-bottom:120px}
+.timeline::before{content:'';position:absolute;left:0;top:0;bottom:0;width:1px;background:var(--border)}
+.era{position:relative;margin-bottom:72px;opacity:0;transform:translateY(30px);transition:opacity .8s cubic-bezier(.16,1,.3,1),transform .8s cubic-bezier(.16,1,.3,1)}
+.era.visible{opacity:1;transform:translateY(0)}
+.era-node{position:absolute;left:-5px;top:6px;width:11px;height:11px;border:1px solid var(--border);background:var(--bg);cursor:pointer;z-index:2;transition:all .4s}
+.era-node:hover{border-color:var(--accent);transform:scale(1.4)}
+.era.open .era-node{background:var(--accent);border-color:var(--accent)}
+.era-header{padding-left:40px;cursor:pointer;user-select:none}
+.era-year{font-family:'Courier New',monospace;font-size:10px;color:var(--sub);letter-spacing:3px;font-weight:700}
+.era-name{font-size:24px;font-weight:900;letter-spacing:-.5px;margin-top:4px;transition:color .3s;color:var(--text)}
+.era.open .era-name{color:var(--accent)}
+.era-count{font-size:9px;letter-spacing:2px;color:var(--sub);font-weight:700;margin-top:6px}
+.era-tracks{padding-left:56px;max-height:0;overflow:hidden;transition:max-height .6s cubic-bezier(.16,1,.3,1)}
+.era.open .era-tracks{max-height:4000px}
+.track{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-left:2px solid var(--border);margin-bottom:1px;cursor:pointer;transition:all .25s;gap:16px}
+.track:hover{border-left-color:var(--accent);background:rgba(255,255,255,.02)}
+.track-title{color:var(--dim);font-size:13px;font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.track-meta{color:var(--sub);font-size:10px;white-space:nowrap}
+.track-badge{font-size:9px;font-weight:800;color:var(--accent);padding:3px 8px;background:rgba(255,255,255,.04)}
+.modal-overlay{position:fixed;inset:0;z-index:200;background:rgba(8,8,8,.92);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);display:none;overflow-y:auto;padding:48px 20px}
+.modal-overlay.open{display:block}
+.modal{max-width:640px;margin:0 auto;background:var(--surf);border:1px solid var(--border);padding:56px 48px;position:relative;animation:reveal .4s ease-out;box-shadow:0 60px 120px rgba(0,0,0,.6)}
+.modal-close{position:absolute;top:-1px;right:-1px;background:var(--surf);border:1px solid var(--border);color:var(--sub);font-size:10px;letter-spacing:3px;font-weight:800;padding:10px 20px;cursor:pointer;transition:all .3s;font-family:'Courier New',monospace}
+.modal-close:hover{color:var(--text);background:var(--surf2)}
+.modal-album{font-family:'Courier New',monospace;font-size:10px;color:var(--sub);letter-spacing:3px;font-weight:700}
+.modal-rule{width:32px;height:1px;background:var(--border);margin:20px 0}
+.modal-title{font-size:40px;font-weight:900;line-height:1.05;letter-spacing:-1px;color:var(--text)}
+.modal-artist{font-size:11px;letter-spacing:5px;color:var(--sub);font-weight:700;margin-top:12px}
+.modal-meta{display:flex;gap:40px;margin-top:32px}
+.modal-meta-num{font-size:28px;font-weight:900;line-height:1;color:var(--text)}
+.modal-meta-lab{font-size:8px;letter-spacing:2px;color:var(--sub);font-weight:700;margin-top:4px}
+.modal-block{margin-top:40px}
+.modal-block-label{font-family:'Courier New',monospace;font-size:10px;letter-spacing:3px;color:var(--sub);font-weight:800;margin-bottom:12px}
+.modal-block-text{color:var(--dim);font-size:15px;line-height:1.7}
+.chain-section{margin-top:52px}
+.chain-head{font-size:16px;font-weight:800;letter-spacing:2px;color:var(--text)}
+.chain-sub{font-size:9px;letter-spacing:2px;color:var(--sub);font-weight:700;margin:6px 0 32px}
+.chain-card{padding:18px;border-left:3px solid var(--border);margin-bottom:1px;background:rgba(255,255,255,.01)}
+.chain-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.chain-type{font-size:9px;font-weight:800;letter-spacing:1px;padding:3px 8px}
+.chain-conf{font-size:9px;font-weight:800;letter-spacing:1px}
+.chain-source{font-size:17px;font-weight:700;color:var(--text)}
+.chain-artist{color:var(--dim);font-size:13px;margin-top:4px}
+.chain-desc{color:var(--sub);font-size:11px;margin-top:10px;font-style:italic;opacity:.7}
+.album-ctx{margin-top:60px;border-top:1px solid var(--border);padding-top:40px}
+.album-ctx-label{font-family:'Courier New',monospace;font-size:10px;letter-spacing:3px;color:var(--sub);font-weight:800;margin-bottom:10px}
+.album-ctx-name{font-size:20px;font-weight:800;color:var(--accent)}
+.album-ctx-era{font-size:10px;letter-spacing:3px;color:var(--dim);font-weight:700;margin:6px 0 20px}
+.album-ctx-bio{color:var(--dim);font-size:14px;line-height:1.8;margin-bottom:28px}
+.album-ctx-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+.album-ctx-cell-lab{font-size:8px;letter-spacing:2px;color:var(--sub);font-weight:700;display:block;margin-bottom:6px}
+.album-ctx-cell-val{color:var(--dim);font-size:12px;line-height:1.5}
+.tabbar{position:fixed;left:0;right:0;bottom:0;height:72px;z-index:150;display:flex;align-items:stretch;background:rgba(13,13,12,.94);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-top:1px solid var(--border);padding-bottom:env(safe-area-inset-bottom,0px)}
+.tabbar a{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--sub);text-decoration:none;transition:color .2s;position:relative}
+.tabbar a svg{display:block;transition:stroke .2s;flex-shrink:0}
+.tabbar a span{font-family:'Courier New',monospace;font-size:8px;font-weight:800;letter-spacing:1.5px;line-height:1}
+.tabbar a:hover,.tabbar a.active{color:var(--accent)}
+.tabbar a.active svg{stroke:var(--accent)}
+.search-overlay{position:fixed;inset:0;z-index:180;background:rgba(8,8,8,.95);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);display:none;flex-direction:column;padding:40px 6vw}
+.search-overlay.open{display:flex}
+.search-input{width:100%;max-width:600px;background:transparent;border:none;border-bottom:1px solid var(--border);color:var(--text);font-size:36px;font-weight:900;padding:16px 0;font-family:inherit;letter-spacing:-.5px;outline:none;transition:border-color .3s}
+.search-input:focus{border-bottom-color:var(--accent)}
+.search-input::placeholder{color:var(--sub)}
+.search-results{flex:1;overflow-y:auto;margin-top:32px;max-width:600px}
+.search-close{position:absolute;top:24px;right:24px;background:none;border:1px solid var(--border);color:var(--sub);font-size:10px;letter-spacing:3px;font-weight:800;padding:8px 16px;cursor:pointer;transition:all .3s;font-family:'Courier New',monospace}
+.search-close:hover{color:var(--text);border-color:var(--accent)}
+.s-result{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border);cursor:pointer;transition:all .2s;gap:16px}
+.s-result:hover{padding-left:12px}
+.s-result-title{color:var(--dim);font-size:15px;font-weight:600;flex:1}
+.s-result-meta{color:var(--sub);font-size:10px;white-space:nowrap}
+.s-result-badge{font-size:9px;font-weight:800;color:var(--accent);padding:3px 8px;background:rgba(255,255,255,.04)}
+.data-page{display:none;padding:100px 6vw 120px;max-width:720px}
+.data-page.active{display:block}
+.data-label{font-family:'Courier New',monospace;font-size:10px;color:var(--sub);letter-spacing:4px;font-weight:800}
+.data-title{font-size:56px;font-weight:900;line-height:.95;letter-spacing:-2px;color:var(--text);margin-top:12px}
+.big-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:var(--border);margin-top:36px}
+.big-cell{background:var(--surf);padding:32px 24px;text-align:center}
+.big-num{font-size:44px;font-weight:900;line-height:1;color:var(--text)}
+.big-lab{font-size:8px;letter-spacing:3px;color:var(--sub);font-weight:700;margin-top:8px}
+.sec-row{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:4px;margin-top:4px}
+.sec-cell{background:var(--surf);padding:16px;text-align:center}
+.sec-val{font-size:18px;font-weight:800;color:var(--dim)}
+.sec-lab{font-size:8px;letter-spacing:2px;color:var(--sub);font-weight:700;margin-top:4px}
+.data-section{margin-top:56px}
+.data-sec-head{font-family:'Courier New',monospace;font-size:10px;letter-spacing:3px;color:var(--accent);font-weight:800;margin-bottom:20px}
+.bar-row{display:flex;align-items:center;gap:18px;padding:9px 0}
+.bar{height:2px}
+.bar-name{color:var(--dim);font-size:12px;font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar-stats{color:var(--sub);font-size:10px;font-weight:700;white-space:nowrap}
+.rank-row{display:flex;align-items:center;padding:14px 0;border-bottom:1px solid var(--border);cursor:pointer;transition:all .2s;gap:12px}
+.rank-row:hover{padding-left:8px}
+.rank-num{font-family:'Courier New',monospace;font-size:14px;color:var(--accent);font-weight:700;width:28px}
+.rank-title{color:var(--dim);font-size:15px;font-weight:600}
+.rank-meta{color:var(--sub);font-size:11px}
+.rank-samples{font-size:10px;font-weight:800;color:var(--accent);letter-spacing:1px;white-space:nowrap}
+.life-page{display:none;padding:100px 6vw 120px;max-width:680px}
+.life-page.active{display:block}
+.life-label{font-family:'Courier New',monospace;font-size:10px;color:var(--sub);letter-spacing:4px;font-weight:800}
+.life-title{font-size:clamp(36px,8vw,56px);font-weight:900;line-height:.95;letter-spacing:-2px;color:var(--text);margin-top:12px}
+.life-era{margin-top:48px}
+.life-era-head{font-family:'Courier New',monospace;font-size:10px;letter-spacing:4px;color:var(--accent);font-weight:800;margin-bottom:20px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+.life-entry{position:relative;padding:14px 0 14px 28px;border-left:1px solid var(--border)}
+.life-entry:last-child{border-left-color:transparent}
+.life-dot{position:absolute;left:-3px;top:18px;width:5px;height:5px;background:var(--border)}
+.life-year{font-family:'Courier New',monospace;font-size:9px;color:var(--accent);letter-spacing:2px;font-weight:800}
+.life-entry-title{color:var(--text);font-size:14px;font-weight:700;line-height:1.4}
+.life-entry-body{color:var(--dim);font-size:12px;line-height:1.6;margin-top:4px}
+.life-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px}
+.life-tag{font-size:8px;letter-spacing:1.5px;font-weight:800;padding:2px 6px;color:var(--sub);background:rgba(255,255,255,.03);font-family:'Courier New',monospace}
+.ds-card{background:var(--surf);border:1px solid var(--border);padding:14px 16px;margin-bottom:2px}
+.ds-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px}
+.ds-song{color:var(--text);font-size:14px;font-weight:700}
+.ds-artist{color:var(--dim);font-size:12px}
+.ds-arrow{color:var(--sub);font-size:10px}
+.ds-kanye{color:var(--accent);font-size:12px;font-weight:600}
+.ds-type{font-size:8px;letter-spacing:1.5px;font-weight:800;color:var(--sub);background:rgba(255,255,255,.03);padding:2px 6px;font-family:'Courier New',monospace}
+.ds-year{color:var(--sub);font-size:10px}
+.footer{position:fixed;bottom:72px;left:0;right:0;z-index:40;padding:10px 24px;text-align:center;pointer-events:none}
+.footer-text{font-family:'Courier New',monospace;font-size:9px;letter-spacing:2px;color:var(--sub);font-weight:700}
+@media(max-width:768px){
+.header{padding:80px 24px 60px}.header-title{font-size:42px}.header-stats{gap:32px}
+.timeline{margin-left:24px;padding-right:24px}.modal{padding:40px 20px;margin:0 8px}
+.album-ctx-grid{grid-template-columns:1fr}.big-row{grid-template-columns:1fr}
+.sec-row{grid-template-columns:1fr 1fr}.data-page{padding:80px 20px 100px}.data-title{font-size:36px}
+.search-overlay{padding:40px 20px 0}.search-input{font-size:28px}
+.life-page{padding:80px 20px 100px}
+}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}#bg-canvas{display:none}}
+</style>
 </head>
 <body>
-  <noscript>请启用 JavaScript 以运行音迹 SoundTrace</noscript>
-  <div id="root"></div>
+<canvas id="bg-canvas"></canvas>
+<nav class="tabbar">
+  <a href="#" class="active" data-page="archive">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="4" width="7" height="7" rx="0.5"/><rect x="13" y="4" width="7" height="7" rx="0.5"/><rect x="4" y="13" width="7" height="7" rx="0.5"/><rect x="13" y="13" width="7" height="7" rx="0.5"/></svg>
+    <span>作品</span></a>
+  <a href="#" onclick="openSearch()">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <span>搜索</span></a>
+  <a href="#" data-page="life">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    <span>生平</span></a>
+  <a href="#" data-page="data">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5" y="14" width="3.5" height="7" rx="0.5"/><rect x="10.25" y="8" width="3.5" height="13" rx="0.5"/><rect x="15.5" y="4" width="3.5" height="17" rx="0.5"/></svg>
+    <span>数据</span></a>
+</nav>
+<div class="app">
+  <header class="header" id="archive-view">
+    <p class="header-index">KANYE WEST · 完整档案</p>
+    <h1 class="header-title"><span>YE</span></h1>
+    <div class="header-rule"></div>
+    <div class="header-stats" id="hero-stats"></div>
+  </header>
+  <section class="timeline" id="timeline"><div class="timeline-rail"></div></section>
+  <div class="data-page" id="data-page"></div>
+  <div class="life-page" id="life-page"></div>
+</div>
+<div class="search-overlay" id="search-overlay">
+  <button class="search-close" onclick="closeSearch()">关闭</button>
+  <input type="text" class="search-input" placeholder="搜索 Kanye West 作品集" id="search-input" autocomplete="off">
+  <div class="search-results" id="search-results"></div>
+</div>
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()">关闭</button>
+    <div id="modal-content"></div>
+  </div>
+</div>
+<div class="footer"><p class="footer-text">"我将成为史上最伟大的艺术家" KANYE WEST</p></div>
+<script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js"}}</script>
+<script type="module">
+import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
+const canvas=document.getElementById('bg-canvas');
+const renderer=new THREE.WebGLRenderer({canvas,alpha:true,antialias:true});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+renderer.setSize(window.innerWidth,window.innerHeight);
+renderer.shadowMap.enabled=true;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;
+const scene=new THREE.Scene();
+scene.fog=new THREE.FogExp2('#0D0D0C',0.00012);
+const camera=new THREE.PerspectiveCamera(55,window.innerWidth/window.innerHeight,0.1,100);
+camera.position.set(0,0,7);
+scene.add(new THREE.AmbientLight('#666666',0.3));
+const key=new THREE.DirectionalLight('#ffffff',2);
+key.position.set(5,8,5);key.castShadow=true;scene.add(key);
+scene.add(new THREE.DirectionalLight('#888888',1).position.set(-3,-1,-3));
+const pt1=new THREE.PointLight('#ffffff',25,10);pt1.position.set(3,2,-2);scene.add(pt1);
+const pt2=new THREE.PointLight('#888888',15,8);pt2.position.set(-4,-1,-1);scene.add(pt2);
+const mat1=new THREE.MeshStandardMaterial({color:'#B8B8B2',roughness:0.55,metalness:0.45});
+const mat2=new THREE.MeshStandardMaterial({color:'#888882',roughness:0.6,metalness:0.4});
+const mat3=new THREE.MeshStandardMaterial({color:'#D4D4D0',roughness:0.5,metalness:0.5});
+function addGeo(geo,mat,pos,rot){const m=new THREE.Mesh(geo,mat);m.castShadow=true;m.position.set(...pos);if(rot)m.rotation.set(...rot);scene.add(m);return m}
+const geos=[
+  addGeo(new THREE.TorusKnotGeometry(1,0.2,100,16),mat1,[3.5,1.5,-2]),
+  addGeo(new THREE.BoxGeometry(1.4,1.4,1.4),mat2,[-3,-0.5,-1.5],[0.5,0.8,0.3]),
+  addGeo(new THREE.IcosahedronGeometry(0.45,1),mat3,[2,3,-2.5]),
+  addGeo(new THREE.TorusGeometry(0.8,0.06,32,80),mat1,[-2,1.5,-3.5],[1.2,0.3,0]),
+  addGeo(new THREE.OctahedronGeometry(0.5,0),mat2,[3,-2,-2]),
+];
+let mx=0,my=0,tmx=0,tmy=0;
+window.addEventListener('mousemove',e=>{tmx=(e.clientX/window.innerWidth)*2-1;tmy=(e.clientY/window.innerHeight)*2-1});
+const clock=new THREE.Clock();
+function animate(){
+  requestAnimationFrame(animate);
+  const t=clock.getElapsedTime();
+  mx+=(tmx-mx)*0.04;my+=(tmy-my)*0.04;
+  camera.position.x+=mx*0.6-camera.position.x*0.03;
+  camera.position.y+=-my*0.4-camera.position.y*0.03;
+  camera.lookAt(0,0,-1);
+  geos.forEach((g,i)=>{g.rotation.x+=0.002*(i+1);g.rotation.y+=0.003*(i+1)});
+  pt1.intensity=25+Math.sin(t*0.7)*6;
+  pt2.intensity=15+Math.cos(t*0.5)*4;
+  renderer.render(scene,camera);
+}
+animate();
+window.addEventListener('resize',()=>{camera.aspect=window.innerWidth/window.innerHeight;camera.updateProjectionMatrix();renderer.setSize(window.innerWidth,window.innerHeight)});
+</script>
+<script>
+var API='http://'+window.location.hostname+':8000/api/v1';
+var allSongs=[],albums=[];
+var ERA_COLORS={'The College Dropout':'#B8B8B2','Late Registration':'#A0A09A','Graduation':'#C8C8C2','808s and Heartbreak':'#90908A','My Beautiful Dark Twisted Fantasy':'#D0D0CA','Yeezus':'#B0B0AA','The Life of Pablo':'#C0C0BA','Ye':'#A8A8A2','Jesus Is King':'#989892','Donda':'#888882','Donda 2':'#B8B8B2','Vultures 1':'#A0A09A','Vultures 2':'#C0C0BA','Bully':'#A8A8A2'};
+var TYPE_COLORS={drum:'#D4D4D0',melody:'#C4C4BE',vocal_chop:'#B8B8B2',bass:'#C8C8C2',fx:'#BCBCB6',texture:'#C0C0BA'};
+function esc(s){return(s||'').replace(/'/g,"\\'");}
+function escHtml(s){var d=document.createElement('div');d.textContent=s||'';return d.innerHTML;}
+
+var LIFE_DATA=[{"era": "\u8d77\u6e90 1977-1995", "items": [{"y": "1977", "t": "Kanye Omari West \u51fa\u751f", "b": "6\u67088\u65e5\uff0c\u4f50\u6cbb\u4e9a\u5dde\u4e9a\u7279\u5170\u5927\u3002\u7236\u4eb2 Ray West\uff08\u524d\u9ed1\u8c79\u515a\u6210\u5458\u3001\u6444\u5f71\u8bb0\u8005\uff09\u3002\u6bcd\u4eb2 Dr. Donda C. West\uff08\u82f1\u8bed\u6559\u6388\uff09\u3002", "tags": ["\u51fa\u751f", "\u4e9a\u7279\u5170\u5927"]}, {"y": "1980", "t": "\u7236\u6bcd\u79bb\u5f02\uff0c\u968f\u6bcd\u4eb2\u79fb\u5c45\u829d\u52a0\u54e5", "b": "3\u5c81\u65f6\u7236\u6bcd\u79bb\u5a5a\u3002\u6bcd\u4eb2 Donda \u72ec\u81ea\u5728\u829d\u52a0\u54e5\u629a\u517b\u4ed6\u957f\u5927\u3002", "tags": ["\u829d\u52a0\u54e5", "\u5bb6\u5ead"]}, {"y": "1987", "t": "\u5728\u4e2d\u56fd\u5357\u4eac\u751f\u6d3b\u4e00\u5e74", "b": "10\u5c81\u3002\u6bcd\u4eb2\u4f5c\u4e3a\u5bcc\u5e03\u83b1\u7279\u5b66\u8005\u5728\u5357\u4eac\u5927\u5b66\u4efb\u6559\u3002Kanye \u662f\u73ed\u4e0a\u552f\u4e00\u7684\u5916\u56fd\u5b66\u751f\u3002", "tags": ["\u4e2d\u56fd", "\u6559\u80b2"]}, {"y": "1990", "t": "\u7b2c\u4e00\u9996\u8bf4\u5531\u5f55\u97f3", "b": "13\u5c81\u5f55\u5236 Green Eggs and Ham\u3002\u6bcd\u4eb2\u652f\u4ed8\u6bcf\u5c0f\u65f625\u7f8e\u5143\u7684\u5f55\u97f3\u68da\u8d39\u7528\u3002\u5236\u4f5c\u4eba No I.D. \u5f00\u59cb\u6307\u5bfc\u4ed6\u3002", "tags": ["\u97f3\u4e50", "\u829d\u52a0\u54e5"]}, {"y": "1997", "t": "\u4ece\u5927\u5b66\u9000\u5b66", "b": "\u79bb\u5f00\u829d\u52a0\u54e5\u5dde\u7acb\u5927\u5b66\u5168\u804c\u505a\u97f3\u4e50\u3002\u8fd9\u6b21\u9000\u5b66\u6210\u4e3a The College Dropout \u7684\u6838\u5fc3\u53d9\u4e8b\u3002", "tags": ["\u9000\u5b66", "\u97f3\u4e50"]}]}, {"era": "\u5730\u4e0b\u594b\u6597 1996-2003", "items": [{"y": "1996", "t": "\u9996\u6b21\u83b7\u5f97\u5236\u4f5c\u7f72\u540d", "b": "\u4e3a Grav \u7684 Down to Earth \u5236\u4f5c\u4e868\u9996\u6b4c\u3002\u7b2c\u4e00\u6b21\u6709\u507f\u5236\u4f5c\u5de5\u4f5c\u3002", "tags": ["\u5236\u4f5c", "\u51fa\u9053"]}, {"y": "2000", "t": "\u7b7e\u7ea6 Roc-A-Fella", "b": "\u6210\u4e3a Jay-Z\u3001Beanie Sigel\u3001Ludacris \u7684\u5185\u90e8\u5236\u4f5c\u4eba\u3002\u53d1\u5c55\u51fa\u6807\u5fd7\u6027\u82b1\u6817\u9f20\u7075\u9b42\u98ce\u683c\u3002", "tags": ["Roc-A-Fella", "Jay-Z"]}, {"y": "2001", "t": "\u5236\u4f5c The Blueprint", "b": "\u4e3a Jay-Z \u5236\u4f5c The Blueprint\uff0c\u4e00\u8dc3\u6210\u4e3a\u9876\u7ea7\u5236\u4f5c\u4eba\u3002", "tags": ["Jay-Z", "\u7ecf\u5178"]}, {"y": "2002", "t": "\u9669\u4e9b\u4e27\u547d\u7684\u8f66\u7978", "b": "10\u670823\u65e5\u3002\u4e0b\u989a\u7c89\u788e\uff0c\u624b\u672f\u7528\u94a2\u4e1d\u56fa\u5b9a\u3002\u4e24\u5468\u540e\u5e26\u7740\u94a2\u4e1d\u5f55\u5236\u4e86 Through the Wire\u3002", "tags": ["\u8f66\u7978", "Through the Wire"]}]}, {"era": "\u5d1b\u8d77 2004-2007", "items": [{"y": "2004", "t": "The College Dropout \u53d1\u5e03", "b": "2\u670810\u65e5\u3002Billboard \u7b2c2\u4f4d\uff0c\u4e09\u767d\u91d1\u3002\u521b\u7acb GOOD Music \u5382\u724c\u3002", "tags": ["\u9996\u5f20\u4e13\u8f91", "GOOD Music"]}, {"y": "2005", "t": "Late Registration + \u5e03\u4ec0\u4e8b\u4ef6", "b": "Billboard \u51a0\u519b\u3002Gold Digger \u9738\u699c10\u5468\u3002\u5728\u7535\u89c6\u76f4\u64ad\u4e2d\u8bf4'\u4e54\u6cbb\u00b7\u5e03\u4ec0\u4e0d\u5728\u4e4e\u9ed1\u4eba'\u3002", "tags": ["\u4e13\u8f91", "\u4e89\u8bae"]}, {"y": "2005", "t": "\u63a8\u51fa\u9996\u4e2a\u65f6\u88c5\u7cfb\u5217", "b": "\u5165\u9009\u300a\u65f6\u4ee3\u300b\u5168\u7403\u6700\u5177\u5f71\u54cd\u529b100\u4eba\u3002", "tags": ["\u65f6\u5c1a", "\u65f6\u4ee3\u767e\u5927"]}, {"y": "2007", "t": "Graduation \u51fb\u8d25 50 Cent", "b": "\u9996\u546895.7\u4e07\u5f20\u5b8c\u80dc\u3002Stronger \u593a\u51a0\u3002\u4f53\u80b2\u573a\u8bf4\u5531\u65f6\u4ee3\u5f00\u59cb\u3002", "tags": ["\u4e13\u8f91", "Daft Punk"]}, {"y": "2007", "t": "\u6bcd\u4eb2 Donda West \u53bb\u4e16", "b": "11\u670810\u65e5\u3002\u56e0\u6574\u5bb9\u624b\u672f\u5e76\u53d1\u75c7\u53bb\u4e16\uff0c\u4eab\u5e7458\u5c81\u3002\u52a0\u5dde\u968f\u540e\u901a\u8fc7 Donda West \u6cd5\u6848\u3002", "tags": ["\u6bcd\u4eb2", "\u60b2\u5267"]}]}, {"era": "\u5fc3\u788e\u4e0e\u6551\u8d4e 2008-2010", "items": [{"y": "2008", "t": "808s & Heartbreak", "b": "\u5f7b\u5e95\u8f6c\u5411 Auto-Tune\u3002\u5728\u590f\u5a01\u5937\u4e09\u5468\u5f55\u5236\u5b8c\u6210\u3002\u4e0e\u672a\u5a5a\u59bb Alexis Phifer \u5206\u624b\u3002", "tags": ["\u4e13\u8f91", "Auto-Tune"]}, {"y": "2009", "t": "Nike Air Yeezy \u53d1\u5e03", "b": "\u7b2c\u4e00\u4e2a\u975e\u8fd0\u52a8\u5458 Nike \u8054\u540d\u3002\u4e0e Louis Vuitton \u5408\u4f5c\u978b\u5c65\u3002\u5728\u7f57\u9a6c Fendi \u5b9e\u4e60\u3002", "tags": ["\u65f6\u5c1a", "Nike", "Yeezy"]}, {"y": "2009", "t": "Taylor Swift VMA \u4e8b\u4ef6", "b": "9\u670813\u65e5\u3002\u6253\u65ad Taylor Swift \u83b7\u5956\u611f\u8a00\u3002\u5965\u5df4\u9a6c\u79f0\u4ed6\u4e3a'\u8822\u8d27'\u3002\u81ea\u6211\u6d41\u653e\u5230\u590f\u5a01\u5937\u3002", "tags": ["VMA", "\u4e89\u8bae"]}, {"y": "2010", "t": "MBDTF \u65f7\u4e16\u6770\u4f5c", "b": "Pitchfork 10\u5206\u6ee1\u5206\u300235\u5206\u949f Runaway \u77ed\u7247\u3002\u88ab\u5e7f\u6cdb\u8ba4\u4e3a\u662f21\u4e16\u7eaa\u6700\u4f1f\u5927\u7684\u4e13\u8f91\u3002", "tags": ["\u6770\u4f5c", "\u4e13\u8f91"]}]}, {"era": "\u5bb6\u5ead\u4e0e\u65f6\u5c1a\u5e1d\u56fd 2011-2014", "items": [{"y": "2011", "t": "Watch the Throne + \u5df4\u9ece\u65f6\u88c5\u5468", "b": "\u4e0e Jay-Z \u8054\u540d\u4e13\u8f91\u3002\u63a8\u51fa DW Kanye West \u5973\u88c5\u7cfb\u5217\u3002", "tags": ["Jay-Z", "\u65f6\u5c1a"]}, {"y": "2012", "t": "\u4e0e Kim Kardashian \u5f00\u59cb\u4ea4\u5f80", "b": "4\u6708\u516c\u5f00\u604b\u60c5\u3002\u521b\u7acb\u521b\u610f\u516c\u53f8 DONDA\uff08\u4ee5\u6bcd\u4eb2\u547d\u540d\uff09\u3002", "tags": ["Kim", "Donda"]}, {"y": "2013", "t": "\u957f\u5973 North \u51fa\u751f + Yeezus", "b": "6\u670815\u65e5\u5973\u513f\u51fa\u751f\u30026\u670818\u65e5 Yeezus \u5de5\u4e1a\u5b9e\u9a8c\u6770\u4f5c\u53d1\u5e03\u3002", "tags": ["\u7236\u4eb2", "Yeezus"]}, {"y": "2013", "t": "\u7b7e\u7ea6 Adidas Yeezy", "b": "\u79bb\u5f00 Nike\u3002\u4e0e Adidas \u7b7e\u7ea6\uff1a15%\u7248\u7a0e\u3001\u5b8c\u5168\u54c1\u724c\u6240\u6709\u6743\u3002\u5341\u4ebf\u7f8e\u5143\u5e1d\u56fd\u8d77\u822a\u3002", "tags": ["Adidas", "\u5408\u7ea6"]}, {"y": "2014", "t": "\u4e0e Kim Kardashian \u7ed3\u5a5a", "b": "5\u670824\u65e5\u3002\u610f\u5927\u5229\u4f5b\u7f57\u4f26\u8428\u53e4\u5821\u5a5a\u793c\u300215\u514b\u62c9\u94bb\u6212\u3002", "tags": ["\u5a5a\u59fb", "Kim"]}]}, {"era": "Yeezy \u5341\u4ebf\u5e1d\u56fd 2015-2017", "items": [{"y": "2015", "t": "Yeezy Season 1 + \u513f\u5b50 Saint \u51fa\u751f", "b": "\u7ebd\u7ea6\u65f6\u88c5\u5468 Yeezy Season 1\u300212\u67085\u65e5\u513f\u5b50\u51fa\u751f\u3002VMA \u5148\u950b\u5927\u5956\uff0c\u5ba3\u5e032020\u5e74\u7ade\u9009\u603b\u7edf\u3002", "tags": ["Yeezy", "\u7236\u4eb2"]}, {"y": "2016", "t": "The Life of Pablo + \u7cbe\u795e\u5d29\u6e83", "b": "MSG \u9ea6\u8fea\u900a\u5e7f\u573a\u82b1\u56ed Yeezy Season 3\u300211\u670821\u65e5\u56e0\u4e34\u65f6\u6027\u7cbe\u795e\u75c5\u4f4f\u9662\u3002", "tags": ["\u4e13\u8f91", "\u5065\u5eb7"]}, {"y": "2017", "t": "\u9690\u5c45\u6000\u4fc4\u660e", "b": "\u5728 Jackson Hole \u5f55\u5236\u97f3\u4e50\u3002\u6de1\u51fa\u516c\u4f17\u89c6\u91ce11\u4e2a\u6708\u3002\u4e0e\u5019\u4efb\u603b\u7edf Trump \u4f1a\u9762\u3002", "tags": ["\u6000\u4fc4\u660e"]}]}, {"era": "\u6000\u4fc4\u660e\u5230 Sunday Service 2018-2020", "items": [{"y": "2018", "t": "\u5973\u513f Chicago \u51fa\u751f + MAGA \u65f6\u4ee3", "b": "1\u670815\u65e5\u5973\u513f\u51fa\u751f\u3002\u6234 MAGA \u5e3d\u652f\u6301 Trump\u3002\u6000\u4fc4\u660e Sessions\uff1a5\u5468\u5236\u4f5c5\u5f20\u4e13\u8f91\u3002", "tags": ["\u7236\u4eb2", "\u4e89\u8bae"]}, {"y": "2018", "t": "\u8bbf\u95ee\u767d\u5bab + \u66f4\u540d\u4e3a Ye", "b": "\u5728\u692d\u5706\u5f62\u529e\u516c\u5ba4\u4f1a\u89c1 Trump\u3002\u6b63\u5f0f\u66f4\u540d Ye\u3002", "tags": ["Trump", "Ye"]}, {"y": "2019", "t": "\u513f\u5b50 Psalm \u51fa\u751f + Sunday Service", "b": "5\u67089\u65e5\u513f\u5b50\u51fa\u751f\u3002\u5f00\u59cb\u6bcf\u5468 Sunday Service\u3002Yeezy \u9500\u552e\u989d\u7a81\u783410\u4ebf\u7f8e\u5143\u3002", "tags": ["\u7236\u4eb2", "Sunday Service"]}, {"y": "2019", "t": "Jesus Is King \u798f\u97f3\u4e13\u8f91", "b": "\u57fa\u7763\u6559\u563b\u54c8\u3002\u53f2\u4e0a\u9996\u5f20\u540c\u65f6\u767b\u9876\u4e94\u5927\u699c\u5355\u7684\u4e13\u8f91\u3002", "tags": ["\u57fa\u7763\u6559", "\u4e13\u8f91"]}, {"y": "2020", "t": "\u7ade\u9009\u7f8e\u56fd\u603b\u7edf", "b": "\u751f\u65e5\u515a\u3002\u7ea66\u4e07\u5f20\u9009\u7968\u3002\u8d25\u9009\u540e\u53d1\u6587\uff1a'\u597d\u4e86 KANYE 2024'\u3002", "tags": ["\u653f\u6cbb"]}]}, {"era": "Donda \u4e0e\u5e1d\u56fd\u5d29\u584c 2021-2022", "items": [{"y": "2021", "t": "\u4e0e Kim \u79bb\u5a5a", "b": "2\u670819\u65e5 Kim \u9012\u4ea4\u79bb\u5a5a\u7533\u8bf7\u3002Kanye \u4f4f\u5728\u4f53\u80b2\u573a\u5185\u5f55\u5236 Donda\u3002", "tags": ["\u79bb\u5a5a"]}, {"y": "2021", "t": "Donda \u53d1\u5e03", "b": "8\u670829\u65e5\u3002\u4ee5\u6bcd\u4eb2\u547d\u540d\u300226\u9996\u6b4c\uff0c108\u5206\u949f\u3002\u7b2c10\u5f20\u8fde\u7eed\u51a0\u519b\u4e13\u8f91\u3002", "tags": ["\u4e13\u8f91", "\u6bcd\u4eb2"]}, {"y": "2022", "t": "Yeezy \u5e1d\u56fd\u4e00\u591c\u5d29\u584c", "b": "10\u6708\u3002\u53cd\u72b9\u8a00\u8bba\u5bfc\u81f4 Adidas\u3001Gap\u3001Balenciaga \u5168\u90e8\u7ec8\u6b62\u5408\u4f5c\u3002\u51c0\u8d44\u4ea7\u66b4\u8dcc\u81f34\u4ebf\u3002", "tags": ["\u4e89\u8bae", "\u635f\u5931"]}, {"y": "2022", "t": "\u79bb\u5a5a\u6b63\u5f0f\u751f\u6548", "b": "11\u6708\u30027\u5e74\u5a5a\u59fb\u6b63\u5f0f\u7ed3\u675f\u3002\u56db\u4e2a\u5b69\u5b50\u5171\u540c\u629a\u517b\u3002", "tags": ["\u79bb\u5a5a"]}]}, {"era": "Vultures \u5230 Bully 2023-2026", "items": [{"y": "2023", "t": "Bianca Censori \u6210\u4e3a\u4f34\u4fa3", "b": "\u4e0e\u6fb3\u5927\u5229\u4e9a\u5efa\u7b51\u8bbe\u8ba1\u5e08 Bianca \u975e\u6b63\u5f0f\u7ed3\u5a5a\u3002\u5979\u6210\u4e3a\u521b\u4f5c\u7f2a\u65af\u3002", "tags": ["Bianca"]}, {"y": "2024", "t": "Vultures 1 & 2", "b": "\u4e0e Ty Dolla $ign \u5408\u4f5c\u3002Carnival \u83b7\u7b2c5\u9996\u51a0\u519b\u5355\u66f2\u3002\u6d77\u53e3\u4e2d\u56fd\u8bd5\u542c\u4f1a\u3002", "tags": ["\u4e13\u8f91", "\u4e2d\u56fd"]}, {"y": "2025", "t": "\u4e0a\u6d77\u4f53\u80b2\u573a + Bully \u53d1\u884c", "b": "7\u670812\u65e5\u4e0a\u6d77\u516b\u4e07\u4eba\u4f53\u80b2\u573a\u3002\u591a\u4e2a Bully \u7248\u672c\u53d1\u5e03\u3002Yeezy \u72ec\u7acb\u8fd0\u4f5c\u3002", "tags": ["\u4e13\u8f91", "\u72ec\u7acb"]}, {"y": "2026", "t": "BULLY \u6b63\u5f0f\u53d1\u5e03", "b": "3\u670828\u65e5\u5b8c\u6574\u4e13\u8f91\u4e0a\u67b6\u6d41\u5a92\u4f53\u3002\u672a\u4f7f\u7528 AI\u3002\u56de\u5f52\u7eaf\u7cb9\u827a\u672f\u3002", "tags": ["\u4e13\u8f91", "\u56de\u5f52"]}]}];
+var DOWNSTREAM_DATA=
+[{"song": "Extinct", "artist": "REASON, Isaiah Rashid & JID", "kanyeSong": "Stronger", "album": "Graduation", "year": "2020", "type": "\u4eba\u58f0\u5f15\u7528"}, {"song": "Love You Better", "artist": "King Combs feat. Chris Brown", "kanyeSong": "Stronger", "album": "Graduation", "year": "2018", "type": "\u4eba\u58f0\u5f15\u7528"}, {"song": "Let's Get Lost", "artist": "G-Eazy feat. Devon Baldwin", "kanyeSong": "Stronger", "album": "Graduation", "year": "2014", "type": "\u4eba\u58f0\u5f15\u7528"}, {"song": "Swear to God", "artist": "Fat Joe & Remy Ma", "kanyeSong": "Stronger", "album": "Graduation", "year": "2017", "type": "\u4eba\u58f0\u5f15\u7528"}, {"song": "Daft Mouth", "artist": "Neil Cicierega", "kanyeSong": "Stronger", "album": "Graduation", "year": "2014", "type": "\u6df7\u642d"}, {"song": "Stronger (Freestyle)", "artist": "Pitbull", "kanyeSong": "Stronger", "album": "Graduation", "year": "2009", "type": "\u7ffb\u5531"}, {"song": "Stronger (Cover)", "artist": "Thirty Seconds to Mars", "kanyeSong": "Stronger", "album": "Graduation", "year": "2010", "type": "\u7ffb\u5531"}, {"song": "Stronger (Live)", "artist": "Kelly Clarkson", "kanyeSong": "Stronger", "album": "Graduation", "year": "2012", "type": "\u7ffb\u5531"}, {"song": "Heartless (Cover)", "artist": "The Fray", "kanyeSong": "Heartless", "album": "808s & Heartbreak", "year": "2009", "type": "\u7ffb\u5531"}, {"song": "Heartless (Cover)", "artist": "Dia Frampton", "kanyeSong": "Heartless", "album": "808s & Heartbreak", "year": "2010", "type": "\u7ffb\u5531"}, {"song": "Heartless (Cover)", "artist": "William Fitzsimmons", "kanyeSong": "Heartless", "album": "808s & Heartbreak", "year": "2009", "type": "\u7ffb\u5531"}, {"song": "Heartless (Cover)", "artist": "Kris Allen", "kanyeSong": "Heartless", "album": "808s & Heartbreak", "year": "2010", "type": "\u7ffb\u5531"}, {"song": "This Is Why I'm Hot", "artist": "Mims", "kanyeSong": "Jesus Walks", "album": "The College Dropout", "year": "2007", "type": "\u6b4c\u8bcd\u5f15\u7528"}, {"song": "HEADSTONE", "artist": "Flatbush Zombies", "kanyeSong": "Jesus Walks", "album": "The College Dropout", "year": "2018", "type": "\u91c7\u6837"}, {"song": "Pure Magic", "artist": "Girl Talk", "kanyeSong": "Jesus Walks", "album": "The College Dropout", "year": "2006", "type": "\u6df7\u642d"}, {"song": "Moving on Up", "artist": "Evidence feat. Conway", "kanyeSong": "Jesus Walks", "album": "The College Dropout", "year": "2021", "type": "\u6b4c\u8bcd\u5f15\u7528"}, {"song": "Muhammad Walks", "artist": "Lupe Fiasco", "kanyeSong": "Jesus Walks", "album": "The College Dropout", "year": "2006", "type": "\u7ffb\u5531"}, {"song": "I Know (Remix)", "artist": "Lecrae", "kanyeSong": "Jesus Walks", "album": "The College Dropout", "year": "2012", "type": "\u6b4c\u8bcd\u5f15\u7528"}, {"song": "Jesus Walks (Remix)", "artist": "Jon Connor", "kanyeSong": "Jesus Walks", "album": "The College Dropout", "year": "2014", "type": "\u7ffb\u5531"}, {"song": "40 Years of Hip Hop", "artist": "The Hood Internet", "kanyeSong": "Jesus Walks", "album": "The College Dropout", "year": "2017", "type": "\u6df7\u642d"}, {"song": "Atelier", "artist": "JUSTHIS", "kanyeSong": "Jesus Walks", "album": "The College Dropout", "year": "2015", "type": "\u91c7\u6837"}, {"song": "Gold Digger (Cover)", "artist": "The Automatic", "kanyeSong": "Gold Digger", "album": "Late Registration", "year": "2006", "type": "\u7ffb\u5531"}, {"song": "Power (Cover)", "artist": "DMA's", "kanyeSong": "POWER", "album": "MBDTF", "year": "2016", "type": "\u7ffb\u5531"}, {"song": "Power (Cover)", "artist": "The Royal Concept", "kanyeSong": "POWER", "album": "MBDTF", "year": "2013", "type": "\u7ffb\u5531"}, {"song": "Runaway (Cover)", "artist": "Gallant", "kanyeSong": "Runaway", "album": "MBDTF", "year": "2018", "type": "\u7ffb\u5531"}, {"song": "Runaway (Cover)", "artist": "Ed Sheeran", "kanyeSong": "Runaway", "album": "MBDTF", "year": "2015", "type": "\u7ffb\u5531"}, {"song": "All of the Lights (Cover)", "artist": "Bastille", "kanyeSong": "All of the Lights", "album": "MBDTF", "year": "2012", "type": "\u7ffb\u5531"}, {"song": "All of the Lights (Cover)", "artist": "Ellie Goulding", "kanyeSong": "All of the Lights", "album": "MBDTF", "year": "2011", "type": "\u7ffb\u5531"}, {"song": "Flashing Lights (Cover)", "artist": "BadBadNotGood", "kanyeSong": "Flashing Lights", "album": "Graduation", "year": "2013", "type": "\u7ffb\u5531"}, {"song": "Can't Tell Me Nothing (Cover)", "artist": "Zach Bryan", "kanyeSong": "Can't Tell Me Nothing", "album": "Graduation", "year": "2022", "type": "\u7ffb\u5531"}, {"song": "Good Life (Cover)", "artist": "Ed Sheeran", "kanyeSong": "Good Life", "album": "Graduation", "year": "2010", "type": "\u7ffb\u5531"}, {"song": "All Falls Down (Cover)", "artist": "Jorja Smith", "kanyeSong": "All Falls Down", "album": "The College Dropout", "year": "2018", "type": "\u7ffb\u5531"}, {"song": "All Falls Down (Cover)", "artist": "Daniel Caesar", "kanyeSong": "All Falls Down", "album": "The College Dropout", "year": "2017", "type": "\u7ffb\u5531"}, {"song": "Through the Wire (Cover)", "artist": "Rod Wave", "kanyeSong": "Through the Wire", "album": "The College Dropout", "year": "2020", "type": "\u6b4c\u8bcd\u5f15\u7528"}, {"song": "Touch the Sky (Cover)", "artist": "Tori Kelly", "kanyeSong": "Touch the Sky", "album": "Late Registration", "year": "2015", "type": "\u7ffb\u5531"}, {"song": "Say What's Real", "artist": "Drake", "kanyeSong": "Say You Will", "album": "808s & Heartbreak", "year": "2009", "type": "\u91c7\u6837"}, {"song": "Potato Salad", "artist": "A$AP Rocky & Tyler, The Creator", "kanyeSong": "Knock Knock (prod. Kanye)", "album": "After the Storm", "year": "2018", "type": "\u91c7\u6837"}, {"song": "Heaven Only Knows", "artist": "Towkio feat. Chance", "kanyeSong": "Heaven (prod. Kanye)", "album": "Get Lifted", "year": "2016", "type": "\u91c7\u6837"}, {"song": "N.A.M.E", "artist": "Tory Lanez", "kanyeSong": "You Don't Know My Name (prod.)", "album": "Diary of Alicia Keys", "year": "2015", "type": "\u91c7\u6837"}, {"song": "Going in for Life", "artist": "Drake", "kanyeSong": "Another Summer (prod. Kanye)", "album": "Another Summer", "year": "2009", "type": "\u91c7\u6837"}, {"song": "Guerrilla Monsoon Rap", "artist": "Talib Kweli", "kanyeSong": "F*** Y'all N****z (prod.)", "album": "Forever", "year": "2004", "type": "\u91c7\u6837"}, {"song": "Work Out", "artist": "J. Cole", "kanyeSong": "The New Workout Plan", "album": "The College Dropout", "year": "2011", "type": "\u91c7\u6837"}, {"song": "1985 (Intro)", "artist": "J. Cole", "kanyeSong": "We Don't Care", "album": "The College Dropout", "year": "2018", "type": "\u6b4c\u8bcd\u5f15\u7528"}, {"song": "HiiiPoWer", "artist": "Kendrick Lamar", "kanyeSong": "So Appalled", "album": "MBDTF", "year": "2011", "type": "\u91c7\u6837"}, {"song": "90210", "artist": "Travis Scott feat. Kacy Hill", "kanyeSong": "Family Business", "album": "The College Dropout", "year": "2015", "type": "\u91c7\u6837"}, {"song": "Marvin & Chardonnay", "artist": "Big Sean feat. Kanye West", "kanyeSong": "Amazing", "album": "808s & Heartbreak", "year": "2011", "type": "\u91c7\u6837"}, {"song": "Dunfiato", "artist": "Redman", "kanyeSong": "Livin' in a Movie", "album": "Freshmen Adjustment", "year": "2010", "type": "\u91c7\u6837"}, {"song": "So Good", "artist": "Chance the Rapper", "kanyeSong": "Good Ass Intro", "album": "Freshmen Adjustment", "year": "2012", "type": "\u91c7\u6837"}, {"song": "m.A.A.d city", "artist": "Kendrick Lamar", "kanyeSong": "We Major", "album": "Late Registration", "year": "2012", "type": "\u6b4c\u8bcd\u5f15\u7528"}, {"song": "The Cure", "artist": "J. Cole", "kanyeSong": "Lift Off", "album": "Watch the Throne", "year": "2011", "type": "\u91c7\u6837"}, {"song": "Trill Friends", "artist": "Erykah Badu", "kanyeSong": "Real Friends", "album": "TLOP", "year": "2016", "type": "\u91c7\u6837"}, {"song": "Real Friends (Remix)", "artist": "DMX", "kanyeSong": "Real Friends", "album": "TLOP", "year": "2016", "type": "\u6df7\u97f3"}, {"song": "Fade (Remix)", "artist": "Kaytranada", "kanyeSong": "Fade", "album": "TLOP", "year": "2016", "type": "\u6df7\u97f3"}, {"song": "No More Parties in LA (Cover)", "artist": "Anderson .Paak", "kanyeSong": "No More Parties in LA", "album": "TLOP", "year": "2017", "type": "\u7ffb\u5531"}, {"song": "Ultralight Beam (Cover)", "artist": "Local Natives", "kanyeSong": "Ultralight Beam", "album": "TLOP", "year": "2016", "type": "\u7ffb\u5531"}, {"song": "Ultralight Beam (Cover)", "artist": "Harry Styles", "kanyeSong": "Ultralight Beam", "album": "TLOP", "year": "2017", "type": "\u7ffb\u5531"}, {"song": "Father Stretch (Freestyle)", "artist": "Desiigner", "kanyeSong": "Father Stretch My Hands Pt.1", "album": "TLOP", "year": "2016", "type": "\u6b4c\u8bcd\u5f15\u7528"}, {"song": "Bound 2 (Cover)", "artist": "Eight Beat Measure", "kanyeSong": "Bound 2", "album": "Yeezus", "year": "2014", "type": "\u7ffb\u5531"}, {"song": "Black Skinhead (Remix)", "artist": "Miley Cyrus & Travis Scott", "kanyeSong": "Black Skinhead", "album": "Yeezus", "year": "2014", "type": "\u6df7\u97f3"}, {"song": "Black Skinhead (Cover)", "artist": "Catfish and the Bottlemen", "kanyeSong": "Black Skinhead", "album": "Yeezus", "year": "2015", "type": "\u7ffb\u5531"}, {"song": "Black Skinhead (Mashup)", "artist": "Girl Talk", "kanyeSong": "Black Skinhead", "album": "Yeezus", "year": "2013", "type": "\u6df7\u642d"}, {"song": "On Sight (Cover)", "artist": "JPEGMAFIA", "kanyeSong": "On Sight", "album": "Yeezus", "year": "2019", "type": "\u7ffb\u5531"}, {"song": "Blood on the Leaves (Cover)", "artist": "Tobe Nwigwe", "kanyeSong": "Blood on the Leaves", "album": "Yeezus", "year": "2021", "type": "\u7ffb\u5531"}, {"song": "Ghost Town (Cover)", "artist": "Brockhampton", "kanyeSong": "Ghost Town", "album": "Ye", "year": "2019", "type": "\u7ffb\u5531"}, {"song": "Violent Crimes (Cover)", "artist": "Duckwrth", "kanyeSong": "Violent Crimes", "album": "Ye", "year": "2019", "type": "\u7ffb\u5531"}, {"song": "Follow God (Cover)", "artist": "KB", "kanyeSong": "Follow God", "album": "Jesus Is King", "year": "2020", "type": "\u7ffb\u5531"}, {"song": "Selah (Cover)", "artist": "Lecrae", "kanyeSong": "Selah", "album": "Jesus Is King", "year": "2020", "type": "\u7ffb\u5531"}, {"song": "Hurricane (Cover)", "artist": "Joey Bada$$", "kanyeSong": "Hurricane", "album": "Donda", "year": "2022", "type": "\u6b4c\u8bcd\u5f15\u7528"}, {"song": "Moon (Cover)", "artist": "Giveon", "kanyeSong": "Moon", "album": "Donda", "year": "2022", "type": "\u7ffb\u5531"}, {"song": "Off the Grid (Freestyle)", "artist": "Cordae", "kanyeSong": "Off the Grid", "album": "Donda", "year": "2022", "type": "\u6b4c\u8bcd\u5f15\u7528"}, {"song": "Come to Life (Cover)", "artist": "Tyler, The Creator", "kanyeSong": "Come to Life", "album": "Donda", "year": "2023", "type": "\u7ffb\u5531"}, {"song": "24 (Cover)", "artist": "Kirk Franklin", "kanyeSong": "24", "album": "Donda", "year": "2022", "type": "\u7ffb\u5531"}, {"song": "True Love (Cover)", "artist": "Trippie Redd", "kanyeSong": "True Love", "album": "Donda 2", "year": "2023", "type": "\u7ffb\u5531"}, {"song": "Carnival (Remix)", "artist": "Rich the Kid", "kanyeSong": "CARNIVAL", "album": "Vultures 1", "year": "2024", "type": "\u6df7\u97f3"}, {"song": "Carnival (Freestyle)", "artist": "Playboi Carti", "kanyeSong": "CARNIVAL", "album": "Vultures 1", "year": "2024", "type": "\u6b4c\u8bcd\u5f15\u7528"}, {"song": "BURN (Freestyle)", "artist": "Ty Dolla $ign", "kanyeSong": "BURN", "album": "Vultures 1", "year": "2024", "type": "\u6b4c\u8bcd\u5f15\u7528"}, {"song": "BACK TO ME (Remix)", "artist": "Future", "kanyeSong": "BACK TO ME", "album": "Vultures 1", "year": "2024", "type": "\u6df7\u97f3"}, {"song": "SLIDE (Freestyle)", "artist": "Offset", "kanyeSong": "SLIDE", "album": "Vultures 2", "year": "2024", "type": "\u6b4c\u8bcd\u5f15\u7528"}, {"song": "RIVER (Cover)", "artist": "Young Thug", "kanyeSong": "RIVER", "album": "Vultures 2", "year": "2024", "type": "\u7ffb\u5531"}, {"song": "Preacher Man (Cover)", "artist": "Sunday Service Choir", "kanyeSong": "Preacher Man", "album": "Bully", "year": "2025", "type": "\u7ffb\u5531"}, {"song": "Beauty and the Beast (Cover)", "artist": "070 Shake", "kanyeSong": "Beauty and the Beast", "album": "Bully", "year": "2025", "type": "\u7ffb\u5531"}, {"song": "Love Lockdown (Cover)", "artist": "Glass Animals", "kanyeSong": "Love Lockdown", "album": "808s & Heartbreak", "year": "2014", "type": "\u7ffb\u5531"}, {"song": "Love Lockdown (Cover)", "artist": "The Wind and The Wave", "kanyeSong": "Love Lockdown", "album": "808s & Heartbreak", "year": "2015", "type": "\u7ffb\u5531"}, {"song": "Love Lockdown (Remix)", "artist": "Rihanna", "kanyeSong": "Love Lockdown", "album": "808s & Heartbreak", "year": "2008", "type": "\u7ffb\u5531"}, {"song": "Coldest Winter (Cover)", "artist": "Pentatonix", "kanyeSong": "Coldest Winter", "album": "808s & Heartbreak", "year": "2014", "type": "\u7ffb\u5531"}, {"song": "Street Lights (Cover)", "artist": "Daniel Caesar", "kanyeSong": "Street Lights", "album": "808s & Heartbreak", "year": "2020", "type": "\u7ffb\u5531"}, {"song": "Say You Will (Cover)", "artist": "Caroline Polachek", "kanyeSong": "Say You Will", "album": "808s & Heartbreak", "year": "2020", "type": "\u7ffb\u5531"}, {"song": "RoboCop (Cover)", "artist": "Denzel Curry", "kanyeSong": "RoboCop", "album": "808s & Heartbreak", "year": "2019", "type": "\u7ffb\u5531"}, {"song": "Paranoid (Cover)", "artist": "Steve Lacy", "kanyeSong": "Paranoid", "album": "808s & Heartbreak", "year": "2018", "type": "\u7ffb\u5531"}, {"song": "Welcome to Heartbreak (Cover)", "artist": "Blood Orange", "kanyeSong": "Welcome to Heartbreak", "album": "808s & Heartbreak", "year": "2016", "type": "\u7ffb\u5531"}, {"song": "Dark Fantasy (Cover)", "artist": "Sampha", "kanyeSong": "Dark Fantasy", "album": "MBDTF", "year": "2017", "type": "\u7ffb\u5531"}, {"song": "Gorgeous (Cover)", "artist": "IDK", "kanyeSong": "Gorgeous", "album": "MBDTF", "year": "2019", "type": "\u7ffb\u5531"}, {"song": "Monster (Cover)", "artist": "Denzel Curry", "kanyeSong": "Monster", "album": "MBDTF", "year": "2020", "type": "\u7ffb\u5531"}, {"song": "Devil in a New Dress (Cover)", "artist": "Smino", "kanyeSong": "Devil in a New Dress", "album": "MBDTF", "year": "2018", "type": "\u7ffb\u5531"}, {"song": "Blame Game (Cover)", "artist": "James Blake", "kanyeSong": "Blame Game", "album": "MBDTF", "year": "2016", "type": "\u7ffb\u5531"}, {"song": "Lost in the World (Cover)", "artist": "Bon Iver (original)", "kanyeSong": "Lost in the World", "album": "MBDTF", "year": "2012", "type": "\u7ffb\u5531"}, {"song": "I Am a God (Remix)", "artist": "Death Grips", "kanyeSong": "I Am a God", "album": "Yeezus", "year": "2014", "type": "\u6df7\u97f3"}, {"song": "New Slaves (Cover)", "artist": "Moses Sumney", "kanyeSong": "New Slaves", "album": "Yeezus", "year": "2018", "type": "\u7ffb\u5531"}, {"song": "Hold My Liquor (Cover)", "artist": "070 Shake", "kanyeSong": "Hold My Liquor", "album": "Yeezus", "year": "2020", "type": "\u7ffb\u5531"}, {"song": "Saint Pablo (Cover)", "artist": "Saba", "kanyeSong": "Saint Pablo", "album": "TLOP", "year": "2017", "type": "\u7ffb\u5531"}, {"song": "30 Hours (Cover)", "artist": "Vince Staples", "kanyeSong": "30 Hours", "album": "TLOP", "year": "2017", "type": "\u7ffb\u5531"}, {"song": "I Thought About Killing You (Cover)", "artist": "Kid Cudi", "kanyeSong": "I Thought About Killing You", "album": "Ye", "year": "2019", "type": "\u7ffb\u5531"}, {"song": "Yikes (Cover)", "artist": "Ski Mask the Slump God", "kanyeSong": "Yikes", "album": "Ye", "year": "2019", "type": "\u7ffb\u5531"}, {"song": "All Mine (Cover)", "artist": "Brent Faiyaz", "kanyeSong": "All Mine", "album": "Ye", "year": "2019", "type": "\u7ffb\u5531"}, {"song": "No Mistakes (Cover)", "artist": "Charlie Wilson", "kanyeSong": "No Mistakes", "album": "Ye", "year": "2020", "type": "\u7ffb\u5531"}, {"song": "Jesus Lord (Cover)", "artist": "Pusha T", "kanyeSong": "Jesus Lord", "album": "Donda", "year": "2022", "type": "\u7ffb\u5531"}, {"song": "Praise God (Remix)", "artist": "Baby Keem", "kanyeSong": "Praise God", "album": "Donda", "year": "2022", "type": "\u6df7\u97f3"}, {"song": "City of Gods (Remix)", "artist": "Fivio Foreign", "kanyeSong": "City of Gods", "album": "Donda 2", "year": "2023", "type": "\u6df7\u97f3"}, {"song": "VULTURES (Remix)", "artist": "Lil Durk", "kanyeSong": "VULTURES", "album": "Vultures 1", "year": "2024", "type": "\u6df7\u97f3"}, {"song": "DO IT (Cover)", "artist": "YG", "kanyeSong": "DO IT", "album": "Vultures 1", "year": "2024", "type": "\u7ffb\u5531"}, {"song": "FUK SUMN (Remix)", "artist": "Quavo", "kanyeSong": "FUK SUMN", "album": "Vultures 1", "year": "2024", "type": "\u6df7\u97f3"}, {"song": "BOMB (Remix)", "artist": "North West", "kanyeSong": "BOMB", "album": "Vultures 2", "year": "2024", "type": "\u6df7\u97f3"}, {"song": "Overnight Celebrity (prod.)", "artist": "Twista", "kanyeSong": "Overnight Celebrity", "album": "Kamikaze", "year": "2004", "type": "\u91c7\u6837"}, {"song": "Dreams (prod.)", "artist": "The Game", "kanyeSong": "Dreams", "album": "The Documentary", "year": "2005", "type": "\u91c7\u6837"}, {"song": "Wouldn't Get Far (prod.)", "artist": "The Game", "kanyeSong": "Wouldn't Get Far", "album": "Doctor's Advocate", "year": "2006", "type": "\u91c7\u6837"}, {"song": "The People (prod.)", "artist": "Common", "kanyeSong": "The People", "album": "Finding Forever", "year": "2007", "type": "\u91c7\u6837"}, {"song": "Number One (prod.)", "artist": "John Legend", "kanyeSong": "Number One", "album": "Get Lifted", "year": "2004", "type": "\u91c7\u6837"}, {"song": "Selfish (prod.)", "artist": "Slum Village", "kanyeSong": "Selfish", "album": "Detroit Deli", "year": "2004", "type": "\u91c7\u6837"}, {"song": "Lord", "artist": "Terapia", "kanyeSong": "Every Hour", "album": "Jesus Is King", "year": "2020", "type": "\u91c7\u6837"}, {"song": "Izzo (H.O.V.A.) (prod.)", "artist": "Various Artists", "kanyeSong": "Izzo (H.O.V.A.)", "album": "The Blueprint", "year": "2001", "type": "\u91c7\u6837"}, {"song": "Takeover (prod.)", "artist": "Various Artists", "kanyeSong": "Takeover", "album": "The Blueprint", "year": "2001", "type": "\u91c7\u6837"}, {"song": "Encore (prod.)", "artist": "Various Artists", "kanyeSong": "Encore", "album": "The Black Album", "year": "2003", "type": "\u91c7\u6837"}];
+
+async function init(){
+  try{
+    var r=await fetch(API+'/samples/artist-songs?artist_id=a01');
+    var d=await r.json();
+    if(!d.success)return;
+    allSongs=d.data;
+    var totalSamples=allSongs.reduce(function(t,s){return t+s.sample_count},0);
+    var albumSet=[];
+    allSongs.forEach(function(s){if(albumSet.indexOf(s.album)===-1)albumSet.push(s.album)});
+    var grouped={};
+    allSongs.forEach(function(s){
+      if(!grouped[s.album])grouped[s.album]=[];
+      grouped[s.album].push(s);
+    });
+    albums=Object.entries(grouped).map(function(e){
+      var songs=e[1];
+      return {name:e[0],songs:songs,totalSamples:songs.reduce(function(t,s){return t+s.sample_count},0),year:songs[0]&&songs[0].release_year||0};
+    }).sort(function(a,b){return a.year-b.year});
+
+    document.getElementById('hero-stats').innerHTML=
+      '<div><div class="stat-num">'+albumSet.length+'</div><div class="stat-lab">专辑</div></div>'+
+      '<div><div class="stat-num">'+allSongs.length+'</div><div class="stat-lab">曲目</div></div>'+
+      '<div><div class="stat-num">'+totalSamples+'</div><div class="stat-lab">采样</div></div>';
+
+    var tl=document.getElementById('timeline');
+    tl.innerHTML='<div class="timeline-rail"></div>'+albums.map(function(a,i){
+      var c=ERA_COLORS[a.name]||'#555';
+      return '<div class="era'+(i===0?' open':'')+'" id="era-'+i+'">'+
+        '<div class="era-node" style="border-color:'+c+'" onclick="toggleEra('+i+')"></div>'+
+        '<div class="era-header" onclick="toggleEra('+i+')">'+
+        '<div class="era-year">'+a.year+'</div>'+
+        '<div class="era-name">'+a.name+'</div>'+
+        '<div class="era-count">'+a.songs.length+' 首'+(a.totalSamples>0?' / '+a.totalSamples+' 采样':'')+'</div></div>'+
+        '<div class="era-tracks">'+a.songs.map(function(s){
+          return '<div class="track" style="border-left-color:'+c+'" onclick="openSong(\''+s.id+'\',\''+esc(s.title)+'\',\''+s.release_year+'\',\''+(s.bpm||'')+'\',\''+esc(s.key||'')+'\',\''+(s.sub_genre||'')+'\',\''+esc(s.album)+'\')">'+
+            '<span class="track-title">'+s.title+'</span>'+
+            '<span class="track-meta">'+(s.bpm||'')+'BPM '+(s.key||'')+'</span>'+
+            (s.sample_count>0?'<span class="track-badge">'+s.sample_count+'</span>':'')+
+            '</div>';
+        }).join('')+'</div></div>';
+    }).join('');
+
+    buildDataPage();
+    buildLifePage();
+    setupScrollObserver();
+  }catch(e){console.error(e);}
+}
+
+function toggleEra(i){document.getElementById('era-'+i).classList.toggle('open');}
+
+function setupScrollObserver(){
+  if(window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+  var obs=new IntersectionObserver(function(entries){
+    entries.forEach(function(e){if(e.isIntersecting)e.target.classList.add('visible');});
+  },{threshold:0.1,rootMargin:'0px 0px -60px 0px'});
+  document.querySelectorAll('.era').forEach(function(el){obs.observe(el)});
+}
+
+async function openSong(id,title,year,bpm,key,genre,album){
+  var modal=document.getElementById('modal');
+  var content=document.getElementById('modal-content');
+  modal.classList.add('open');document.body.style.overflow='hidden';
+  content.innerHTML='<p style="color:var(--sub);text-align:center;padding:60px 0">加载中...</p>';
+  try{
+    var r=await fetch(API+'/search/enrich?song_id='+id);
+    var d=await r.json();
+    var x=d.data||{};
+    var samples=x.samples||[];
+    var credits=x.credits||[];
+    var ai=x.album_intro;
+    content.innerHTML=
+      '<p class="modal-album">'+escHtml(album||'')+'</p>'+
+      '<div class="modal-rule"></div>'+
+      '<h2 class="modal-title">'+escHtml(title||'')+'</h2>'+
+      '<p class="modal-artist">KANYE WEST</p>'+
+      '<div class="modal-meta">'+
+      '<div><span class="modal-meta-num">'+(year||'-')+'</span><span class="modal-meta-lab">年份</span></div>'+
+      '<div><span class="modal-meta-num">'+(bpm||'-')+'</span><span class="modal-meta-lab">BPM</span></div>'+
+      '<div><span class="modal-meta-num">'+(key||'-')+'</span><span class="modal-meta-lab">调式</span></div>'+
+      '<div><span class="modal-meta-num">'+samples.length+'</span><span class="modal-meta-lab">采样</span></div></div>'+
+      (x.theme?'<div class="modal-block"><p class="modal-block-label">创作主题</p><p class="modal-block-text">'+escHtml(x.theme)+'</p></div>':'')+
+      (x.context?'<div class="modal-block"><p class="modal-block-label">采样故事</p><p class="modal-block-text">'+escHtml(x.context)+'</p></div>':'')+
+      (credits.length?'<div class="modal-block"><p class="modal-block-label">制作团队</p><p class="modal-block-text">'+credits.map(function(c){return escHtml(c.artist_name)+' <span style="color:var(--sub)">'+c.role+'</span>'}).join(' · ')+'</p></div>':'')+
+      '<div class="chain-section">'+
+      '<p class="chain-head">采样 DNA</p>'+
+      '<p class="chain-sub">'+samples.length+' 已确认采样源</p>'+
+      (samples.length===0?'<p style="color:var(--sub);font-size:13px;padding:20px 0">无已知采样源。原创作品。</p>':
+        samples.map(function(sp){
+          var tc=TYPE_COLORS[sp.type]||'#C4C4BE';
+          return '<div class="chain-card" style="border-left-color:'+tc+'">'+
+            '<div class="chain-top">'+
+            '<span class="chain-type" style="background:rgba(255,255,255,0.04);color:'+tc+'">'+(sp.type||'melody').toUpperCase().replace(/_/g,' ')+'</span>'+
+            '<span class="chain-conf" style="color:'+tc+'">'+Math.round((sp.confidence||0)*100)+'%</span></div>'+
+            '<p class="chain-source">'+escHtml(sp.source_title)+'</p>'+
+            '<p class="chain-artist">'+escHtml(sp.source_artist)+(sp.source_year?' · '+sp.source_year:'')+'</p>'+
+            (sp.description?'<p class="chain-desc">'+escHtml(sp.description)+'</p>':'')+'</div>';
+        }).join(''))+
+      '</div>'+
+      (ai&&ai.bio?'<div class="album-ctx">'+
+        '<p class="album-ctx-label">专辑背景</p>'+
+        '<p class="album-ctx-name">'+escHtml(album||'')+'</p>'+
+        '<p class="album-ctx-era">'+escHtml(ai.era||'')+'</p>'+
+        '<p class="album-ctx-bio">'+escHtml(ai.bio)+'</p>'+
+        '<div class="album-ctx-grid">'+
+        '<div><span class="album-ctx-cell-lab">声音风格</span><span class="album-ctx-cell-val">'+escHtml(ai.sound||'')+'</span></div>'+
+        '<div><span class="album-ctx-cell-lab">主题表达</span><span class="album-ctx-cell-val">'+escHtml(ai.theme||'')+'</span></div>'+
+        '<div><span class="album-ctx-cell-lab">历史地位</span><span class="album-ctx-cell-val">'+escHtml(ai.legacy||'')+'</span></div>'+
+        '</div></div>':'');
+  }catch(e){content.innerHTML='<p style="color:var(--sub);text-align:center;padding:60px 0">加载失败</p>';}
+}
+
+function closeModal(){document.getElementById('modal').classList.remove('open');document.body.style.overflow='';}
+document.getElementById('modal').addEventListener('click',function(e){if(e.target===this)closeModal();});
+document.addEventListener('keydown',function(e){if(e.key==='Escape'){closeModal();closeSearch();}});
+
+function openSearch(){
+  document.getElementById('search-overlay').classList.add('open');
+  setTimeout(function(){document.getElementById('search-input').focus();},100);
+}
+function closeSearch(){
+  document.getElementById('search-overlay').classList.remove('open');
+  document.getElementById('search-input').value='';
+  document.getElementById('search-results').innerHTML='';
+}
+document.getElementById('search-input').addEventListener('input',async function(){
+  var q=this.value.trim();
+  var res=document.getElementById('search-results');
+  if(q.length<1){res.innerHTML='';return;}
+  try{
+    var r=await fetch(API+'/search?q='+encodeURIComponent(q)+'&limit=50');
+    var d=await r.json();
+    if(!d.success)return;
+    res.innerHTML=d.data.map(function(s){
+      return '<div class="s-result" onclick="closeSearch();openSong(\''+s.id+'\',\''+esc(s.title)+'\',\''+s.release_year+'\',\''+(s.bpm||'')+'\',\''+esc(s.key_signature||'')+'\',\''+(s.sub_genre||'')+'\',\''+esc(s.album_title||'')+'\')">'+
+        '<span class="s-result-title">'+s.title+'</span>'+
+        '<span class="s-result-meta">'+s.release_year+(s.bpm?' · '+s.bpm+'BPM':'')+'</span>'+
+        (s.sample_count>0?'<span class="s-result-badge">'+s.sample_count+'</span>':'')+'</div>';
+    }).join('');
+  }catch(e){}
+});
+
+function buildDataPage(){
+  if(!allSongs.length)return;
+  var ts=allSongs.reduce(function(t,s){return t+s.sample_count},0);
+  var tc=allSongs.reduce(function(t,s){return t+s.credit_count},0);
+  var st=allSongs.filter(function(s){return s.sample_count>0}).length;
+  var tm=Math.floor(allSongs.reduce(function(t,s){return t+s.duration_ms},0)/60000);
+  var ab=Math.round(allSongs.reduce(function(t,s){return t+(s.bpm||0)},0)/allSongs.length);
+  var ms=Math.max.apply(null,albums.map(function(a){return a.totalSamples}).concat([1]));
+  var top=allSongs.filter(function(s){return s.sample_count>0}).sort(function(a,b){return b.sample_count-a.sample_count}).slice(0,10);
+
+  var dsHtml='';
+  DOWNSTREAM_DATA.forEach(function(ds){
+    dsHtml+='<div class="ds-card">'+
+      '<div class="ds-top">'+
+      '<div style="flex:1"><p class="ds-song">'+ds.song+'</p><p class="ds-artist">'+ds.artist+'</p></div>'+
+      '<span class="ds-type">'+ds.type+'</span></div>'+
+      '<div style="display:flex;align-items:center;gap:6px;margin-top:4px">'+
+      '<span class="ds-arrow">源自</span>'+
+      '<span class="ds-kanye">'+ds.kanyeSong+'</span>'+
+      '<span style="color:var(--sub);font-size:10px">'+ds.album+'</span>'+
+      '<span class="ds-year">'+ds.year+'</span></div></div>';
+  });
+
+  document.getElementById('data-page').innerHTML=
+    '<p class="data-label">数据</p>'+
+    '<h2 class="data-title">数据总览</h2>'+
+    '<div class="big-row">'+
+    '<div class="big-cell"><span class="big-num">'+allSongs.length+'</span><span class="big-lab">曲目</span></div>'+
+    '<div class="big-cell"><span class="big-num">'+ts+'</span><span class="big-lab">采样</span></div>'+
+    '<div class="big-cell"><span class="big-num">'+tc+'</span><span class="big-lab">制作</span></div></div>'+
+    '<div class="sec-row">'+
+    '<div class="sec-cell"><span class="sec-val">'+albums.length+'</span><span class="sec-lab">专辑</span></div>'+
+    '<div class="sec-cell"><span class="sec-val">'+st+'</span><span class="sec-lab">含采样</span></div>'+
+    '<div class="sec-cell"><span class="sec-val">'+tm+'</span><span class="sec-lab">分钟</span></div>'+
+    '<div class="sec-cell"><span class="sec-val">'+ab+'</span><span class="sec-lab">平均BPM</span></div></div>'+
+    '<div class="data-section"><p class="data-sec-head">专辑采样分布</p>'+
+    albums.map(function(a){return '<div class="bar-row"><div class="bar" style="width:'+Math.max((a.totalSamples/ms)*120,2)+'px;background:var(--accent)"></div><span class="bar-name">'+a.name+'</span><span class="bar-stats">'+a.songs.length+'首 / '+a.totalSamples+'采样</span></div>'}).join('')+'</div>'+
+    '<div class="data-section"><p class="data-sec-head">谁采样了 KANYE</p>'+dsHtml+'</div>'+
+    '<div class="data-section"><p class="data-sec-head">采样最多</p>'+
+    top.map(function(s,i){return '<div class="rank-row" onclick="openSong(\''+s.id+'\',\''+esc(s.title)+'\',\''+s.release_year+'\',\''+(s.bpm||'')+'\',\''+esc(s.key||'')+'\',\''+(s.sub_genre||'')+'\',\''+esc(s.album)+'\')"><span class="rank-num">'+String(i+1).padStart(2,'0')+'</span><div style="flex:1"><p class="rank-title">'+s.title+'</p><p class="rank-meta">'+s.album+' · '+s.release_year+'</p></div><span class="rank-samples">'+s.sample_count+' 采样</span></div>'}).join('')+'</div>';
+}
+
+function buildLifePage(){
+  var page=document.getElementById('life-page');
+  var html='<p class="life-label">生平纪事</p><h2 class="life-title">YE<br>的一生</h2>';
+  LIFE_DATA.forEach(function(era){
+    html+='<div class="life-era"><p class="life-era-head">'+era.era+'</p>';
+    era.items.forEach(function(e){
+      html+='<div class="life-entry"><div class="life-dot"></div><span class="life-year">'+e.y+'</span><p class="life-entry-title">'+e.t+'</p><p class="life-entry-body">'+e.b+'</p><div class="life-tags">'+e.tags.map(function(t){return '<span class="life-tag">'+t+'</span>'}).join('')+'</div></div>';
+    });
+    html+='</div>';
+  });
+  html+='<div style="height:80px"></div>';
+  page.innerHTML=html;
+}
+
+document.querySelectorAll('.tabbar a[data-page]').forEach(function(link){
+  link.addEventListener('click',function(e){
+    e.preventDefault();
+    document.querySelectorAll('.tabbar a').forEach(function(l){l.classList.remove('active')});
+    this.classList.add('active');
+    var page=this.dataset.page;
+    document.getElementById('archive-view').style.display=page==='archive'?'':'none';
+    document.getElementById('timeline').style.display=page==='archive'?'':'none';
+    document.getElementById('data-page').classList.toggle('active',page==='data');
+    document.getElementById('life-page').classList.toggle('active',page==='life');
+    document.querySelector('.footer').style.display=(page==='data'||page==='life')?'none':'';
+  });
+});
+
+buildLifePage();init();
+</script>
 </body>
 </html>
